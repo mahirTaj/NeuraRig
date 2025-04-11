@@ -5,10 +5,9 @@ const cors = require("cors");
 
 
 mongoose
-  .connect("mongodb+srv://mahir19800:5EzAT9CMZ08p8O@cluster0.fuswl0j.mongodb.net/")
+  .connect("mongodb+srv://mahir19800:5EzAT9CMZ08p8O@cluster0.fuswl0j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
   .then(() => console.log("MongoDB connected"))
   .catch((error) => console.log(error));
-
 
 
 const app = express();
