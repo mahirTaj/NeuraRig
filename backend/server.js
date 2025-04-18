@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
-
+const authRouter = require("./routes/auth/auth-routes");
 
 mongoose
   .connect("mongodb+srv://mahir19800:5EzAT9CMZ08p8O@cluster0.fuswl0j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
@@ -30,7 +30,7 @@ app.use(
 
 app.use(cookieParser());
 app.use(express.json());
-
+app.use("/api/auth", authRouter);
 
 
 
