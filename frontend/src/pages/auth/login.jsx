@@ -2,6 +2,12 @@ import CommonForm from "@/components/common/form";
 import { loginFormControls } from "@/config";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { loginUser } from "@/store/auth-slice";
+import { useToast } from "@/hooks/use-toast";
+
+
+
 
 const initialState = {
   email: "",
@@ -10,15 +16,29 @@ const initialState = {
 
 function AuthLogin() {
   const [formData, setFormData] = useState(initialState);
-  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const {toast} = useToast()
+
 
   const onSubmit = (event) => {
     event.preventDefault();
-    console.log("Form submitted:", formData);
 
-    // You can add real API call here later
-    // For now, we just navigate to dashboard
-    navigate("/dashboard");
+    dispatch(loginUser(formData)).then(data=> {
+      if ( data?.payload?.success){
+        toast({
+          title : data?.payload?.message
+        })
+      }else{
+        toast({
+          title: data?.payload?.message,
+          variant: "destructive",
+          
+        })
+      }
+    }
+
+    )
+
   };
 
   return (
