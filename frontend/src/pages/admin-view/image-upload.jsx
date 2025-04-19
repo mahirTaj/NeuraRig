@@ -1,33 +1,81 @@
-import React, { useRef } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input"; // Make sure this path is correct
 
-function ProductImageUpload({
-  imageFile,
-  setImageFile,
-  uploadedImageUrl,
-  setUploadedImageUrl,
-  isCustomStyling = false
-}) {
+import React, { useState, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { UploadCloudIcon, XIcon, FileIcon } from "lucide-react";
+
+function ProductImageUpload({ isCustomStyling = false, isEditMode = false }) {
+  const [imageFile, setImageFile] = useState(null);
   const inputRef = useRef(null);
 
   function handleImageFileChange(event) {
-    console.log(event.target.files);
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setImageFile(selectedFile);
+    }
+  }
+
+  function handleDragOver(event) {
+    event.preventDefault();
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    const droppedFile = event.dataTransfer.files?.[0];
+    if (droppedFile) {
+      setImageFile(droppedFile);
+    }
+  }
+  function handleRemoveImage() {
+    setImageFile(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   }
 
   return (
     <div className={`w-full mt-4 ${isCustomStyling ? "" : "max-w-md mx-auto"}`}>
-      <Label className="text-lg font-semibold mb-2 block">
-        Upload Image
-      </Label>
-      <div>
+      <Label className="text-lg font-semibold mb-2 block">Upload Image</Label>
+      <div
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className="relative border-2 border-dashed border-gray-300 rounded-md p-4 flex items-center justify-center"
+      >
         <Input
           id="image-upload"
           type="file"
-        //   className="hidden"
+          className="hidden"
           ref={inputRef}
           onChange={handleImageFileChange}
         />
+        {!imageFile ? (
+          <Label
+            htmlFor="image-upload"
+            className={`${
+              isEditMode ? "cursor-not-allowed" : ""
+            } flex flex-col items-center justify-center h-32 cursor-pointer`}
+          >
+            <UploadCloudIcon className="w-10 h-10 text-muted-foreground mb-2" />
+            <span>Drag & drop or click to upload image</span>
+          </Label>
+        ) : (
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center">
+              <FileIcon className="w-8 h-8 text-primary mr-2" />
+              <p className="text-sm font-medium">{imageFile.name}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleRemoveImage}
+            >
+              <XIcon className="w-4 h-4" />
+              <span className="sr-only">Remove File</span>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
