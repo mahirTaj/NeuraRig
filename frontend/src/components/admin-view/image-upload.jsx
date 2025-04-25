@@ -5,9 +5,21 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { UploadCloudIcon, XIcon, FileIcon } from "lucide-react";
 
-function ProductImageUpload({ isCustomStyling = false, isEditMode = false }) {
-  const [imageFile, setImageFile] = useState(null);
+function ProductImageUpload({
+  imageFile,
+  setImageFile,
+  imageLoadingState,
+  uploadedImageUrl,
+  setUploadedImageUrl,
+  setImageLoadingState,
+  isEditMode,
+  isCustomStyling = false,
+}) {
   const inputRef = useRef(null);
+
+  console.log(isEditMode, "isEditMode");
+
+
 
   function handleImageFileChange(event) {
     const selectedFile = event.target.files?.[0];
@@ -58,7 +70,9 @@ function ProductImageUpload({ isCustomStyling = false, isEditMode = false }) {
           >
             <UploadCloudIcon className="w-10 h-10 text-muted-foreground mb-2" />
             <span>Drag & drop or click to upload image</span>
-          </Label>
+            </Label>
+        ) : imageLoadingState ? (
+          <Skeleton className="h-10 bg-gray-100" />
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center">
