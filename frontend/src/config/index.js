@@ -42,7 +42,7 @@ export const loginFormControls = [
       type: "password",
     },
   ];
-export const addProductFormElements = [
+  export const addProductFormElements = [
     {
       label: "Title",
       name: "title",
@@ -103,3 +103,5 @@ export const addProductFormElements = [
       placeholder: "Enter total stock",
     },
   ];
+  
+  
