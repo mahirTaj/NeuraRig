@@ -9,7 +9,7 @@ import {
 import { addProductFormElements } from "@/config";
 import { Fragment, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import ProductImageUpload from "./image-upload";
+import ProductImageUpload from "../../components/admin-view/image-upload";
 
 const initialFormData = {
   images: null,
@@ -27,11 +27,13 @@ function AdminProducts() {
   const [formData, setFormData] = useState(initialFormData); 
   const [imageFile, setImageFile] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+  const [imageLoadingState, setImageLoadingState] = useState(false);
 
-  function onSubmit(e) {
-    e.preventDefault(); // prevent default form behavior
-    // currently does nothing
-  }
+
+  function onSubmit() {}
+
+  console.log(formData, 'formData');
+  
 
   return (
     <Fragment>
@@ -54,6 +56,7 @@ function AdminProducts() {
               setImageFile={setImageFile}
               uploadedImageUrl={uploadedImageUrl}
               setUploadedImageUrl={setUploadedImageUrl}
+              setImageLoadingState = {setImageLoadingState}
             />
             <div className="py-6">
               <CommonForm
