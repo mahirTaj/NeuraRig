@@ -1,4 +1,3 @@
-
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -7,7 +6,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter, SortAscending } from 'lucide-react';
+import { Filter } from 'lucide-react';
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
