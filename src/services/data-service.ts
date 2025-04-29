@@ -1,5 +1,7 @@
-
 import { Product, Category, CartItem } from "@/types";
+
+// Base API URL - replace with your actual backend URL when deployed
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Categories
 export const categories: Category[] = [
@@ -179,38 +181,111 @@ export const products: Product[] = [
   }
 ];
 
-// Helper functions to simulate API calls
-export const getCategories = (): Promise<Category[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(categories), 300);
-  });
+// Helper functions with MongoDB API integration
+export const getCategories = async (): Promise<Category[]> => {
+  try {
+    // Try to fetch from API
+    const response = await fetch(`${API_BASE_URL}/categories`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log("Falling back to local data for categories");
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(categories), 300);
+      });
+    }
+  } catch (error) {
+    console.log("API not available, using local data for categories", error);
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(categories), 300);
+    });
+  }
 };
 
-export const getProducts = (): Promise<Product[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(products), 300);
-  });
+export const getProducts = async (): Promise<Product[]> => {
+  try {
+    // Try to fetch from API
+    const response = await fetch(`${API_BASE_URL}/products`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log("Falling back to local data for products");
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(products), 300);
+      });
+    }
+  } catch (error) {
+    console.log("API not available, using local data for products", error);
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(products), 300);
+    });
+  }
 };
 
-export const getProductsByCategorySlug = (slug: string): Promise<Product[]> => {
-  return new Promise((resolve) => {
-    const filteredProducts = products.filter(product => product.category === slug);
-    setTimeout(() => resolve(filteredProducts), 300);
-  });
+export const getProductsByCategorySlug = async (slug: string): Promise<Product[]> => {
+  try {
+    // Try to fetch from API
+    const response = await fetch(`${API_BASE_URL}/products/category/${slug}`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log(`Falling back to local data for category: ${slug}`);
+      return new Promise((resolve) => {
+        const filteredProducts = products.filter(product => product.category === slug);
+        setTimeout(() => resolve(filteredProducts), 300);
+      });
+    }
+  } catch (error) {
+    console.log("API not available, using local data for category products", error);
+    return new Promise((resolve) => {
+      const filteredProducts = products.filter(product => product.category === slug);
+      setTimeout(() => resolve(filteredProducts), 300);
+    });
+  }
 };
 
-export const getProductById = (id: string): Promise<Product | undefined> => {
-  return new Promise((resolve) => {
-    const product = products.find(product => product.id === id);
-    setTimeout(() => resolve(product), 300);
-  });
+export const getProductById = async (id: string): Promise<Product | undefined> => {
+  try {
+    // Try to fetch from API
+    const response = await fetch(`${API_BASE_URL}/products/${id}`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log(`Falling back to local data for product ID: ${id}`);
+      return new Promise((resolve) => {
+        const product = products.find(product => product.id === id);
+        setTimeout(() => resolve(product), 300);
+      });
+    }
+  } catch (error) {
+    console.log("API not available, using local data for product", error);
+    return new Promise((resolve) => {
+      const product = products.find(product => product.id === id);
+      setTimeout(() => resolve(product), 300);
+    });
+  }
 };
 
-export const getFeaturedProducts = (): Promise<Product[]> => {
-  return new Promise((resolve) => {
-    const featuredProducts = products.filter(product => product.featured);
-    setTimeout(() => resolve(featuredProducts), 300);
-  });
+export const getFeaturedProducts = async (): Promise<Product[]> => {
+  try {
+    // Try to fetch from API
+    const response = await fetch(`${API_BASE_URL}/products/featured`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log("Falling back to local data for featured products");
+      return new Promise((resolve) => {
+        const featuredProducts = products.filter(product => product.featured);
+        setTimeout(() => resolve(featuredProducts), 300);
+      });
+    }
+  } catch (error) {
+    console.log("API not available, using local data for featured products", error);
+    return new Promise((resolve) => {
+      const featuredProducts = products.filter(product => product.featured);
+      setTimeout(() => resolve(featuredProducts), 300);
+    });
+  }
 };
 
 // Cart functions
@@ -267,39 +342,83 @@ export const clearCart = (): Promise<CartItem[]> => {
 };
 
 // AI PC Builder recommendation function
-export const getAiRecommendations = (budget: number, purpose: string): Promise<Product[]> => {
-  return new Promise((resolve) => {
-    // In a real app, this would call an AI model
-    // For now, just return some products based on simple logic
-    let recommendedProducts: Product[] = [];
-    
-    if (purpose === "gaming") {
-      if (budget >= 1500) {
+export const getAiRecommendations = async (budget: number, purpose: string): Promise<Product[]> => {
+  try {
+    // Try to fetch from API
+    const response = await fetch(`${API_BASE_URL}/ai/recommendations?budget=${budget}&purpose=${purpose}`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log("Falling back to local data for AI recommendations");
+      return new Promise((resolve) => {
+        // In a real app, this would call an AI model
+        // For now, just return some products based on simple logic
+        let recommendedProducts: Product[] = [];
+        
+        if (purpose === "gaming") {
+          if (budget >= 1500) {
+            recommendedProducts = products.filter(p => 
+              (p.category === "desktops" || p.category === "laptops") && 
+              p.price <= budget && 
+              p.specs?.graphics?.toString().includes("RTX")
+            );
+          } else {
+            recommendedProducts = products.filter(p => 
+              (p.category === "desktops" || p.category === "laptops") && 
+              p.price <= budget
+            );
+          }
+        } else if (purpose === "productivity") {
+          recommendedProducts = products.filter(p => 
+            (p.category === "desktops" || p.category === "laptops") && 
+            p.price <= budget &&
+            Number(p.specs?.ram?.toString().split("GB")[0]) >= 16
+          );
+        } else {
+          // General purpose
+          recommendedProducts = products.filter(p => 
+            (p.category === "desktops" || p.category === "laptops") && 
+            p.price <= budget
+          );
+        }
+        
+        setTimeout(() => resolve(recommendedProducts.slice(0, 3)), 800);
+      });
+    }
+  } catch (error) {
+    console.log("API not available, using local data for AI recommendations", error);
+    return new Promise((resolve) => {
+      // Fallback to local logic
+      let recommendedProducts: Product[] = [];
+      
+      if (purpose === "gaming") {
+        if (budget >= 1500) {
+          recommendedProducts = products.filter(p => 
+            (p.category === "desktops" || p.category === "laptops") && 
+            p.price <= budget && 
+            p.specs?.graphics?.toString().includes("RTX")
+          );
+        } else {
+          recommendedProducts = products.filter(p => 
+            (p.category === "desktops" || p.category === "laptops") && 
+            p.price <= budget
+          );
+        }
+      } else if (purpose === "productivity") {
         recommendedProducts = products.filter(p => 
           (p.category === "desktops" || p.category === "laptops") && 
-          p.price <= budget && 
-          p.specs?.graphics?.toString().includes("RTX")
+          p.price <= budget &&
+          Number(p.specs?.ram?.toString().split("GB")[0]) >= 16
         );
       } else {
+        // General purpose
         recommendedProducts = products.filter(p => 
           (p.category === "desktops" || p.category === "laptops") && 
           p.price <= budget
         );
       }
-    } else if (purpose === "productivity") {
-      recommendedProducts = products.filter(p => 
-        (p.category === "desktops" || p.category === "laptops") && 
-        p.price <= budget &&
-        Number(p.specs?.ram?.toString().split("GB")[0]) >= 16
-      );
-    } else {
-      // General purpose
-      recommendedProducts = products.filter(p => 
-        (p.category === "desktops" || p.category === "laptops") && 
-        p.price <= budget
-      );
-    }
-    
-    setTimeout(() => resolve(recommendedProducts.slice(0, 3)), 800);
-  });
+      
+      setTimeout(() => resolve(recommendedProducts.slice(0, 3)), 800);
+    });
+  }
 };
