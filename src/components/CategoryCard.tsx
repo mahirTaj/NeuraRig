@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Category } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +12,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
       <Card className="product-card overflow-hidden h-full">
         <div className="aspect-square overflow-hidden">
           <img 
-            src={category.image} 
+            src={`http://localhost:5000${category.image}`} 
             alt={category.name}
             className="h-full w-full object-cover transition-transform hover:scale-105 duration-300 bg-gray-200"
           />

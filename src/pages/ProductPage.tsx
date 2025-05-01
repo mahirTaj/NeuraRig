@@ -1,4 +1,3 @@
-
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -76,7 +75,7 @@ const ProductPage = () => {
       <div className="text-sm breadcrumbs mb-6">
         <ul className="flex gap-2 text-muted-foreground">
           <li><Link to="/" className="hover:text-neura-600">Home</Link></li>
-          <li><Link to={`/category/${product.category}`} className="hover:text-neura-600">{product.category}</Link></li>
+          <li><Link to={`/category/${product.category.slug}`} className="hover:text-neura-600">{product.category.name}</Link></li>
           <li className="text-foreground">{product.name}</li>
         </ul>
       </div>
@@ -85,11 +84,23 @@ const ProductPage = () => {
         {/* Product Image */}
         <div className="md:w-1/2">
           <div className="bg-gray-100 rounded-lg overflow-hidden h-96 flex items-center justify-center">
-            <img 
-              src={product.image} 
-              alt={product.name} 
-              className="w-full h-full object-contain p-8" 
-            />
+            {!product?.images || product.images.length === 0 ? (
+              <div className="text-gray-400 text-center">
+                <svg className="w-24 h-24 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p>No image available</p>
+              </div>
+            ) : (
+              <img 
+                src={product.images[0]?.startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`} 
+                alt={product.name} 
+                className="w-full h-full object-contain p-8" 
+                onError={(e) => {
+                  e.currentTarget.src = 'http://localhost:5000/public/placeholder.svg';
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -143,7 +154,7 @@ const ProductPage = () => {
             </span>
           </div>
           
-          <Button 
+          <Button
             onClick={handleAddToCart} 
             className="w-full bg-neura-600 hover:bg-neura-700"
             disabled={product.stock === 0}
@@ -180,9 +191,10 @@ const ProductPage = () => {
             <div className="bg-gray-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Technical Specifications</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {product.specs && Object.entries(product.specs).map(([key, value]) => (
-                  <div key={key} className="border-b border-gray-200 pb-2">
-                    <span className="font-medium capitalize">{key}:</span> {value}
+                {product.specifications?.map((spec) => (
+                  <div key={spec.name} className="border-b border-gray-200 pb-2">
+                    <span className="font-medium capitalize">{spec.name}:</span> {spec.value}
+                    {spec.unit && <span className="text-gray-500 ml-1">{spec.unit}</span>}
                   </div>
                 ))}
               </div>
@@ -198,26 +210,10 @@ const ProductPage = () => {
           </TabsContent>
           
           <TabsContent value="support" className="pt-6">
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Product Support</h2>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium">Warranty Information</h3>
-                  <p className="text-gray-600 text-sm">This product comes with a 1-year standard warranty.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Returns & Exchanges</h3>
-                  <p className="text-gray-600 text-sm">
-                    You can return or exchange this item within 30 days of receipt.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Support Contact</h3>
-                  <p className="text-gray-600 text-sm">
-                    For technical assistance, please contact our support team at support@neurarig.com
-                  </p>
-                </div>
-              </div>
+            <div className="bg-gray-50 rounded-lg p-6 text-center">
+              <h2 className="text-xl font-semibold mb-2">Product Support</h2>
+              <p className="text-gray-600 mb-4">Need help with your product? Contact our support team.</p>
+              <Button variant="outline">Contact Support</Button>
             </div>
           </TabsContent>
         </Tabs>

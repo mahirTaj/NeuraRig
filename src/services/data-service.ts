@@ -1,424 +1,587 @@
-import { Product, Category, CartItem } from "@/types";
+import axios from 'axios';
+import { Product, Category, CartItem, Brand } from "@/types";
 
-// Base API URL - replace with your actual backend URL when deployed
-const API_BASE_URL = "http://localhost:5000/api";
+export const API_BASE_URL = 'http://localhost:5000/api';
+const API_URL = API_BASE_URL;
 
-// Categories
-export const categories: Category[] = [
-  {
-    id: "1",
-    name: "Laptops",
-    slug: "laptops",
-    image: "/placeholder.svg"
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
   },
-  {
-    id: "2",
-    name: "Desktops",
-    slug: "desktops",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "3",
-    name: "Components",
-    slug: "components",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "4",
-    name: "Peripherals",
-    slug: "peripherals",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "5",
-    name: "Accessories",
-    slug: "accessories",
-    image: "/placeholder.svg"
-  }
-];
+});
 
-// Products
-export const products: Product[] = [
-  {
-    id: "1",
-    name: "NeuraBook Pro",
-    description: "Powerful laptop for professionals with high-end specifications.",
-    price: 1299.99,
-    category: "laptops",
-    image: "/placeholder.svg",
-    rating: 4.5,
-    stock: 15,
-    featured: true,
-    specs: {
-      processor: "Intel Core i7-12700H",
-      ram: "16GB DDR5",
-      storage: "512GB NVMe SSD",
-      display: "15.6\" 2K IPS",
-      graphics: "NVIDIA RTX 3060 6GB"
-    }
-  },
-  {
-    id: "2",
-    name: "NeuraTower Gaming",
-    description: "High-performance gaming desktop with RGB lighting.",
-    price: 1899.99,
-    category: "desktops",
-    image: "/placeholder.svg",
-    rating: 4.7,
-    stock: 8,
-    featured: true,
-    specs: {
-      processor: "AMD Ryzen 9 5900X",
-      ram: "32GB DDR4",
-      storage: "1TB NVMe SSD + 2TB HDD",
-      graphics: "NVIDIA RTX 4070 12GB",
-      cooling: "Liquid Cooling"
-    }
-  },
-  {
-    id: "3",
-    name: "NeuraBook Air",
-    description: "Ultrathin and lightweight laptop for everyday use.",
-    price: 899.99,
-    category: "laptops",
-    image: "/placeholder.svg",
-    rating: 4.2,
-    stock: 22,
-    specs: {
-      processor: "Intel Core i5-1135G7",
-      ram: "8GB DDR4",
-      storage: "256GB NVMe SSD",
-      display: "13.3\" FHD IPS",
-      graphics: "Intel Iris Xe Graphics"
-    }
-  },
-  {
-    id: "4",
-    name: "NeuraStation Workstation",
-    description: "Professional desktop for content creation and heavy workloads.",
-    price: 2299.99,
-    category: "desktops",
-    image: "/placeholder.svg",
-    rating: 4.9,
-    stock: 5,
-    featured: true,
-    specs: {
-      processor: "Intel Core i9-12900K",
-      ram: "64GB DDR5",
-      storage: "2TB NVMe SSD + 4TB HDD",
-      graphics: "NVIDIA RTX 4080 16GB",
-      cooling: "Advanced Liquid Cooling"
-    }
-  },
-  {
-    id: "5",
-    name: "NeuraTower Essential",
-    description: "Budget-friendly desktop for everyday computing needs.",
-    price: 699.99,
-    category: "desktops",
-    image: "/placeholder.svg",
-    rating: 4.0,
-    stock: 18,
-    specs: {
-      processor: "AMD Ryzen 5 5600G",
-      ram: "16GB DDR4",
-      storage: "512GB NVMe SSD",
-      graphics: "AMD Radeon Graphics",
-      cooling: "Air Cooling"
-    }
-  },
-  {
-    id: "6",
-    name: "NeuraBook Gaming",
-    description: "Powerful gaming laptop with high refresh rate display.",
-    price: 1599.99,
-    category: "laptops",
-    image: "/placeholder.svg",
-    rating: 4.6,
-    stock: 10,
-    featured: true,
-    specs: {
-      processor: "AMD Ryzen 7 7800X",
-      ram: "32GB DDR5",
-      storage: "1TB NVMe SSD",
-      display: "17.3\" QHD 165Hz",
-      graphics: "NVIDIA RTX 4070 8GB Mobile"
-    }
-  },
-  {
-    id: "7",
-    name: "NeuraRGB Keyboard",
-    description: "Mechanical gaming keyboard with customizable RGB lighting.",
-    price: 129.99,
-    category: "peripherals",
-    image: "/placeholder.svg",
-    rating: 4.4,
-    stock: 30,
-    specs: {
-      type: "Mechanical",
-      switches: "Cherry MX Brown",
-      lighting: "RGB",
-      connectivity: "USB-C",
-      layout: "Full size"
-    }
-  },
-  {
-    id: "8",
-    name: "NeuraPrecision Mouse",
-    description: "High-precision gaming mouse with adjustable DPI.",
-    price: 79.99,
-    category: "peripherals",
-    image: "/placeholder.svg",
-    rating: 4.3,
-    stock: 25,
-    specs: {
-      sensor: "16000 DPI Optical",
-      buttons: "8 Programmable",
-      lighting: "RGB",
-      connectivity: "USB / Wireless",
-      weight: "Adjustable"
-    }
-  }
-];
+const BRANDS_API_URL = `${API_BASE_URL}/brands`;
 
 // Helper functions with MongoDB API integration
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    // Try to fetch from API
-    const response = await fetch(`${API_BASE_URL}/categories`);
-    if (response.ok) {
-      return await response.json();
-    } else {
-      console.log("Falling back to local data for categories");
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(categories), 300);
-      });
-    }
+    const response = await api.get('/categories');
+    return response.data;
   } catch (error) {
-    console.log("API not available, using local data for categories", error);
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(categories), 300);
-    });
+    console.error('Error fetching categories:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    return [];
   }
 };
 
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    // Try to fetch from API
-    const response = await fetch(`${API_BASE_URL}/products`);
-    if (response.ok) {
-      return await response.json();
-    } else {
-      console.log("Falling back to local data for products");
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(products), 300);
-      });
-    }
+    const response = await api.get('/products');
+    return response.data;
   } catch (error) {
-    console.log("API not available, using local data for products", error);
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(products), 300);
-    });
+    console.error('Error fetching products:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    return [];
   }
 };
 
 export const getProductsByCategorySlug = async (slug: string): Promise<Product[]> => {
   try {
-    // Try to fetch from API
-    const response = await fetch(`${API_BASE_URL}/products/category/${slug}`);
-    if (response.ok) {
-      return await response.json();
-    } else {
-      console.log(`Falling back to local data for category: ${slug}`);
-      return new Promise((resolve) => {
-        const filteredProducts = products.filter(product => product.category === slug);
-        setTimeout(() => resolve(filteredProducts), 300);
-      });
-    }
+    const response = await api.get(`/products/category/${slug}`);
+    return response.data;
   } catch (error) {
-    console.log("API not available, using local data for category products", error);
-    return new Promise((resolve) => {
-      const filteredProducts = products.filter(product => product.category === slug);
-      setTimeout(() => resolve(filteredProducts), 300);
-    });
+    console.error('Error fetching products by category:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    return [];
   }
 };
 
-export const getProductById = async (id: string): Promise<Product | undefined> => {
+export const getProductById = async (id: string): Promise<Product | null> => {
   try {
-    // Try to fetch from API
-    const response = await fetch(`${API_BASE_URL}/products/${id}`);
-    if (response.ok) {
-      return await response.json();
-    } else {
-      console.log(`Falling back to local data for product ID: ${id}`);
-      return new Promise((resolve) => {
-        const product = products.find(product => product.id === id);
-        setTimeout(() => resolve(product), 300);
-      });
-    }
+    const response = await api.get(`/products/${id}`);
+    return response.data;
   } catch (error) {
-    console.log("API not available, using local data for product", error);
-    return new Promise((resolve) => {
-      const product = products.find(product => product.id === id);
-      setTimeout(() => resolve(product), 300);
-    });
+    console.error('Error fetching product:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    return null;
   }
 };
 
 export const getFeaturedProducts = async (): Promise<Product[]> => {
   try {
-    // Try to fetch from API
-    const response = await fetch(`${API_BASE_URL}/products/featured`);
-    if (response.ok) {
-      return await response.json();
-    } else {
-      console.log("Falling back to local data for featured products");
-      return new Promise((resolve) => {
-        const featuredProducts = products.filter(product => product.featured);
-        setTimeout(() => resolve(featuredProducts), 300);
-      });
-    }
+    const response = await api.get('/products/featured');
+    return response.data;
   } catch (error) {
-    console.log("API not available, using local data for featured products", error);
-    return new Promise((resolve) => {
-      const featuredProducts = products.filter(product => product.featured);
-      setTimeout(() => resolve(featuredProducts), 300);
-    });
+    console.error('Error fetching featured products:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    return [];
   }
 };
 
-// Cart functions
-let cart: CartItem[] = [];
-
-export const getCart = (): Promise<CartItem[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve([...cart]), 300);
-  });
-};
-
-export const addToCart = (product: Product, quantity: number = 1): Promise<CartItem[]> => {
-  return new Promise((resolve) => {
-    const existingItemIndex = cart.findIndex(item => item.product.id === product.id);
-    
-    if (existingItemIndex !== -1) {
-      cart[existingItemIndex].quantity += quantity;
-    } else {
-      cart.push({ product, quantity });
-    }
-    
-    setTimeout(() => resolve([...cart]), 300);
-  });
-};
-
-export const updateCartItem = (productId: string, quantity: number): Promise<CartItem[]> => {
-  return new Promise((resolve) => {
-    const itemIndex = cart.findIndex(item => item.product.id === productId);
-    
-    if (itemIndex !== -1) {
-      if (quantity <= 0) {
-        cart = cart.filter(item => item.product.id !== productId);
-      } else {
-        cart[itemIndex].quantity = quantity;
-      }
-    }
-    
-    setTimeout(() => resolve([...cart]), 300);
-  });
-};
-
-export const removeFromCart = (productId: string): Promise<CartItem[]> => {
-  return new Promise((resolve) => {
-    cart = cart.filter(item => item.product.id !== productId);
-    setTimeout(() => resolve([...cart]), 300);
-  });
-};
-
-export const clearCart = (): Promise<CartItem[]> => {
-  return new Promise((resolve) => {
-    cart = [];
-    setTimeout(() => resolve([...cart]), 300);
-  });
-};
-
-// AI PC Builder recommendation function
-export const getAiRecommendations = async (budget: number, purpose: string): Promise<Product[]> => {
+export const searchProducts = async (query: string): Promise<Product[]> => {
   try {
-    // Try to fetch from API
-    const response = await fetch(`${API_BASE_URL}/ai/recommendations?budget=${budget}&purpose=${purpose}`);
+    const response = await fetch(`${API_BASE_URL}/products/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) {
+      throw new Error('Failed to search products');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error searching products:', error);
+    throw error;
+  }
+};
+
+// Cart operations
+export const getCart = async (): Promise<CartItem[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/cart`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
     if (response.ok) {
       return await response.json();
-    } else {
-      console.log("Falling back to local data for AI recommendations");
-      return new Promise((resolve) => {
-        // In a real app, this would call an AI model
-        // For now, just return some products based on simple logic
-        let recommendedProducts: Product[] = [];
-        
-        if (purpose === "gaming") {
-          if (budget >= 1500) {
-            recommendedProducts = products.filter(p => 
-              (p.category === "desktops" || p.category === "laptops") && 
-              p.price <= budget && 
-              p.specs?.graphics?.toString().includes("RTX")
-            );
-          } else {
-            recommendedProducts = products.filter(p => 
-              (p.category === "desktops" || p.category === "laptops") && 
-              p.price <= budget
-            );
-          }
-        } else if (purpose === "productivity") {
-          recommendedProducts = products.filter(p => 
-            (p.category === "desktops" || p.category === "laptops") && 
-            p.price <= budget &&
-            Number(p.specs?.ram?.toString().split("GB")[0]) >= 16
-          );
-        } else {
-          // General purpose
-          recommendedProducts = products.filter(p => 
-            (p.category === "desktops" || p.category === "laptops") && 
-            p.price <= budget
-          );
-        }
-        
-        setTimeout(() => resolve(recommendedProducts.slice(0, 3)), 800);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    return [];
+  }
+};
+
+export const addToCart = async (product: Product, quantity: number = 1): Promise<CartItem[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/cart`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        productId: product._id,
+        quantity
+      })
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error('Failed to add item to cart');
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    throw error;
+  }
+};
+
+export const updateCartItem = async (productId: string, quantity: number): Promise<CartItem[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/cart/${productId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ quantity })
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error('Failed to update cart item');
+  } catch (error) {
+    console.error('Error updating cart item:', error);
+    throw error;
+  }
+};
+
+export const removeFromCart = async (productId: string): Promise<CartItem[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/cart/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error('Failed to remove item from cart');
+  } catch (error) {
+    console.error('Error removing from cart:', error);
+    throw error;
+  }
+};
+
+export const clearCart = async (): Promise<void> => {
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_BASE_URL}/cart`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  } catch (error) {
+    console.error('Error clearing cart:', error);
+    throw error;
+  }
+};
+
+// Order functions
+interface Order {
+  id: string;
+  userId: string;
+  date: string;
+  total: number;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  shippingAddress: string;
+  paymentMethod: string;
+  status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
+}
+
+export const getOrders = async (userId?: string): Promise<Order[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/orders${userId ? `?userId=${userId}` : ''}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      return await response.json();
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return [];
+  }
+};
+
+export const addOrder = async (order: Order): Promise<Order[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(order)
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error('Failed to add order');
+  } catch (error) {
+    console.error('Error adding order:', error);
+    throw error;
+  }
+};
+
+export const cancelOrder = async (orderId: string, userId: string): Promise<Order[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ status: 'cancelled' })
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error('Failed to cancel order');
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    throw error;
+  }
+};
+
+export const createProduct = async (productData: any) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const formData = new FormData();
+    formData.append('name', productData.name);
+    formData.append('brand', productData.brand);
+    formData.append('modelName', productData.modelName);
+    formData.append('description', productData.description);
+    formData.append('price', productData.price.toString());
+    formData.append('category', productData.category);
+    formData.append('stock', productData.stock.toString());
+    
+    // Handle multiple images
+    if (productData.images && productData.images.length > 0) {
+      productData.images.forEach((image: File) => {
+        formData.append('images', image);
       });
     }
-  } catch (error) {
-    console.log("API not available, using local data for AI recommendations", error);
-    return new Promise((resolve) => {
-      // Fallback to local logic
-      let recommendedProducts: Product[] = [];
-      
-      if (purpose === "gaming") {
-        if (budget >= 1500) {
-          recommendedProducts = products.filter(p => 
-            (p.category === "desktops" || p.category === "laptops") && 
-            p.price <= budget && 
-            p.specs?.graphics?.toString().includes("RTX")
-          );
-        } else {
-          recommendedProducts = products.filter(p => 
-            (p.category === "desktops" || p.category === "laptops") && 
-            p.price <= budget
-          );
-        }
-      } else if (purpose === "productivity") {
-        recommendedProducts = products.filter(p => 
-          (p.category === "desktops" || p.category === "laptops") && 
-          p.price <= budget &&
-          Number(p.specs?.ram?.toString().split("GB")[0]) >= 16
-        );
-      } else {
-        // General purpose
-        recommendedProducts = products.filter(p => 
-          (p.category === "desktops" || p.category === "laptops") && 
-          p.price <= budget
-        );
+
+    if (productData.specifications) {
+      formData.append('specifications', JSON.stringify(productData.specifications.map((spec: any) => ({
+        name: spec.name,
+        value: spec.value,
+        unit: spec.unit
+      }))));
+    }
+
+    const response = await axios.post(`${API_BASE_URL}/products`, formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
       }
-      
-      setTimeout(() => resolve(recommendedProducts.slice(0, 3)), 800);
     });
+
+    if (response.status !== 201) {
+      throw new Error('Failed to create product');
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Error creating product:', error);
+    throw error;
+  }
+};
+
+export const updateProduct = async (id: string, product: {
+  name?: string;
+  brand?: string;
+  modelName?: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  stock?: number;
+  images?: File[];
+  existingImages?: string[];
+  specifications?: Array<{
+    name: string;
+    value: string;
+    unit?: string;
+  }>;
+}): Promise<Product> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const formData = new FormData();
+    if (product.name) formData.append('name', product.name);
+    if (product.brand) formData.append('brand', product.brand);
+    if (product.modelName) formData.append('modelName', product.modelName);
+    if (product.description) formData.append('description', product.description);
+    if (product.price) formData.append('price', product.price.toString());
+    if (product.category) formData.append('category', product.category);
+    if (product.stock) formData.append('stock', product.stock.toString());
+    
+    // Handle multiple images
+    if (product.images && product.images.length > 0) {
+      product.images.forEach((image: File) => {
+        formData.append('images', image);
+      });
+    }
+    
+    if (product.existingImages) {
+      formData.append('existingImages', JSON.stringify(product.existingImages));
+    }
+
+    if (product.specifications) {
+      formData.append('specifications', JSON.stringify(product.specifications));
+    }
+
+    const response = await axios.put(`${API_BASE_URL}/products/${id}`, formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    if (response.status !== 200) {
+      throw new Error('Failed to update product');
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Error updating product:', error);
+    throw error;
+  }
+};
+
+export const deleteProduct = async (id: string): Promise<void> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete product');
+    }
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    throw error;
+  }
+};
+
+export const createCategory = async (category: { 
+  name: string; 
+  image?: File;
+  specifications?: Array<{
+    name: string;
+    type: 'text' | 'number' | 'select' | 'checkbox';
+    options: string[];
+    required: boolean;
+    unit?: string;
+  }>;
+}): Promise<Category> => {
+  try {
+    const formData = new FormData();
+    formData.append('name', category.name);
+    
+    if (!category.image) {
+      throw new Error('Image is required');
+    }
+    formData.append('image', category.image);
+
+    if (category.specifications && category.specifications.length > 0) {
+      formData.append('specifications', JSON.stringify(category.specifications));
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+
+    console.log('Sending category data:', {
+      name: category.name,
+      hasImage: !!category.image,
+      specificationsCount: category.specifications?.length || 0
+    });
+
+    const response = await fetch(`${API_URL}/categories`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to create category');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error creating category:', error);
+    throw error;
+  }
+};
+
+export const updateCategory = async (id: string, data: { 
+  name: string; 
+  image?: File;
+  specifications?: Array<{
+    name: string;
+    type: 'text' | 'number' | 'select' | 'checkbox';
+    options: string[];
+    required: boolean;
+    unit?: string;
+  }>;
+}) => {
+  try {
+    const formData = new FormData();
+    formData.append('name', data.name);
+    if (data.image) {
+      formData.append('image', data.image);
+    }
+    if (data.specifications) {
+      formData.append('specifications', JSON.stringify(data.specifications));
+    }
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/categories/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update category');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error updating category:', error);
+    throw error;
+  }
+};
+
+// Brand operations
+export const getBrands = async (): Promise<Brand[]> => {
+  try {
+    const response = await axios.get(BRANDS_API_URL);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching brands:', error);
+    throw error;
+  }
+};
+
+export const createBrand = async (brandData: { name: string; logo: File | null }): Promise<Brand> => {
+  try {
+    const formData = new FormData();
+    formData.append('name', brandData.name);
+    if (brandData.logo) {
+      formData.append('logo', brandData.logo);
+    }
+
+    const response = await axios.post(BRANDS_API_URL, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating brand:', error);
+    throw error;
+  }
+};
+
+export const updateBrand = async (brandId: string, brandData: { name: string; logo: File | null }): Promise<Brand> => {
+  try {
+    const formData = new FormData();
+    formData.append('name', brandData.name);
+    if (brandData.logo) {
+      formData.append('logo', brandData.logo);
+    }
+
+    const response = await axios.put(`${BRANDS_API_URL}/${brandId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating brand:', error);
+    throw error;
+  }
+};
+
+export const deleteBrand = async (brandId: string): Promise<void> => {
+  try {
+    await axios.delete(`${BRANDS_API_URL}/${brandId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting brand:', error);
+    throw error;
+  }
+};
+
+export const deleteProductImage = async (productId: string, imageIndex: number): Promise<void> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.delete(`${API_BASE_URL}/products/${productId}/images/${imageIndex}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.status !== 200) {
+      throw new Error('Failed to delete image');
+    }
+  } catch (error) {
+    console.error('Error deleting product image:', error);
+    throw error;
   }
 };

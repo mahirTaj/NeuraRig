@@ -1,24 +1,45 @@
-
 export interface Product {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   price: number;
-  category: string;
-  image: string;
+  category: {
+    _id: string;
+    name: string;
+    slug: string;
+  };
+  brand: {
+    _id: string;
+    name: string;
+  };
+  modelName: string;
+  images: string[];
   rating: number;
   stock: number;
-  specs?: {
-    [key: string]: string | number | boolean;
-  };
-  featured?: boolean;
+  specifications: Array<{
+    name: string;
+    value: string;
+    unit?: string;
+  }>;
+  featured: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Category {
-  id: string;
+  _id: string;
   name: string;
   slug: string;
   image: string;
+  specifications: Array<{
+    name: string;
+    type: 'text' | 'number' | 'select' | 'checkbox';
+    options: string[];
+    required: boolean;
+    unit?: string;
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CartItem {
@@ -27,8 +48,17 @@ export interface CartItem {
 }
 
 export interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: 'user' | 'admin';
+}
+
+export interface Brand {
+  _id: string;
+  name: string;
+  logo: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
 }

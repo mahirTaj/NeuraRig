@@ -1,8 +1,17 @@
-
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
   name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  brand: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Brand',
+    required: true
+  },
+  modelName: {
     type: String,
     required: true,
     trim: true
@@ -17,33 +26,52 @@ const productSchema = new mongoose.Schema({
     min: 0
   },
   category: {
-    type: String,
-    required: true,
-    ref: 'Category'
-  },
-  image: {
-    type: String,
-    default: '/placeholder.svg'
-  },
-  rating: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 5
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true
   },
   stock: {
     type: Number,
     required: true,
-    min: 0
+    min: 0,
+    default: 0
   },
-  specs: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed
-  },
+  images: [{
+    type: String,
+    required: true
+  }],
+  specifications: [{
+    name: {
+      type: String,
+      required: true
+    },
+    value: {
+      type: String,
+      required: true
+    },
+    unit: {
+      type: String,
+      required: false
+    }
+  }],
   featured: {
     type: Boolean,
     default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, { timestamps: true });
+});
+
+// Update the updatedAt field before saving
+productSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
 module.exports = mongoose.model('Product', productSchema);

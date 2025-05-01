@@ -1,20 +1,48 @@
-
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getCategories } from '@/services/data-service';
+import { getCategories, getCart } from '@/services/data-service';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Search, Menu, X } from 'lucide-react';
+import { ShoppingCart, Search, Menu, X, Settings, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CartItem } from '@/types';
 
-export function Navbar() {
+const Navbar: React.FC = () => {
+  const { user, logout, isAuthenticated } = useAuth();
+  console.log('User in Navbar:', user);
+  console.log('User role:', user?.role);
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const isMobile = useIsMobile();
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories
   });
+
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const cart = await getCart();
+        const count = cart.reduce((total, item) => total + item.quantity, 0);
+        setCartCount(count);
+      } catch (error) {
+        console.error('Error loading cart:', error);
+      }
+    };
+
+    loadCart();
+    // Set up an interval to check for cart updates
+    const interval = setInterval(loadCart, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -51,10 +79,15 @@ export function Navbar() {
             <Link to="/pc-builder" className="text-sm font-medium hover:text-neura-600 transition-colors">
               PC Builder
             </Link>
+            {isAuthenticated && (
+              <Link to="/order-history" className="text-sm font-medium hover:text-neura-600 transition-colors">
+                My Orders
+              </Link>
+            )}
             <Link to="/cart" className="relative">
               <ShoppingCart className="h-5 w-5" />
               <span className="absolute -top-2 -right-2 bg-neura-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                0
+                {cartCount}
               </span>
             </Link>
           </div>
@@ -66,7 +99,7 @@ export function Navbar() {
             <Link to="/cart" className="relative">
               <ShoppingCart className="h-5 w-5" />
               <span className="absolute -top-2 -right-2 bg-neura-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                0
+                {cartCount}
               </span>
             </Link>
             <Button 
@@ -78,6 +111,33 @@ export function Navbar() {
             </Button>
           </div>
         )}
+
+        {/* Authentication Links */}
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <>
+              {user.role === 'admin' && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="icon">
+                    <Settings className="w-6 h-6" />
+                  </Button>
+                </Link>
+              )}
+              <Button variant="ghost" onClick={handleLogout}>
+                <LogOut className="w-6 h-6" />
+              </Button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button variant="ghost">Login</Button>
+              </Link>
+              <Link to="/register">
+                <Button>Register</Button>
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Mobile Menu */}
@@ -129,4 +189,6 @@ export function Navbar() {
       )}
     </nav>
   );
-}
+};
+
+export default Navbar;
