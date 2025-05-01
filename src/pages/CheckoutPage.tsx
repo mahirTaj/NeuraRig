@@ -69,11 +69,11 @@ export default function CheckoutPage() {
 
       // Create order object
       const order = {
-        id: `ORDER-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         userId: user?.id || '',
         date: new Date().toISOString(),
         total,
         items: cartItems.map(item => ({
+          productId: item.product._id,
           name: item.product.name,
           quantity: item.quantity,
           price: item.product.price

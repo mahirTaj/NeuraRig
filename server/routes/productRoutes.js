@@ -23,11 +23,17 @@ router.get('/', async (req, res) => {
 // Get featured products
 router.get('/featured', async (req, res) => {
   try {
+    console.log('Fetching featured products...');
     const products = await Product.find({ featured: true })
       .populate('category', 'name slug')
       .populate('brand', 'name logo');
+    
+    console.log(`Found ${products.length} featured products:`);
+    products.forEach(p => console.log(` - ${p.name} (${p._id})`));
+    
     res.json(products);
   } catch (error) {
+    console.error('Error fetching featured products:', error);
     res.status(500).json({ message: error.message });
   }
 });
