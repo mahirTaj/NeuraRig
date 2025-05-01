@@ -7,7 +7,15 @@ const auth = require('../middleware/auth');
 // Get user's cart
 router.get('/', auth, async (req, res) => {
   try {
-    let cart = await Cart.findOne({ user: req.user.id });
+    let cart = await Cart.findOne({ user: req.user.id })
+      .populate({
+        path: 'items.product',
+        select: 'name price images modelName brand description',
+        populate: {
+          path: 'category',
+          select: 'name'
+        }
+      });
     
     if (!cart) {
       cart = new Cart({ user: req.user.id, items: [] });
@@ -16,6 +24,7 @@ router.get('/', auth, async (req, res) => {
     
     res.json(cart.items);
   } catch (error) {
+    console.error('Error fetching cart:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -51,8 +60,20 @@ router.post('/', auth, async (req, res) => {
     }
     
     await cart.save();
+    
+    // Populate the cart items before sending the response
+    await cart.populate({
+      path: 'items.product',
+      select: 'name price images modelName brand description',
+      populate: {
+        path: 'category',
+        select: 'name'
+      }
+    });
+    
     res.json(cart.items);
   } catch (error) {
+    console.error('Error adding to cart:', error);
     res.status(400).json({ message: error.message });
   }
 });
@@ -83,8 +104,20 @@ router.put('/:productId', auth, async (req, res) => {
     }
     
     await cart.save();
+    
+    // Populate the cart items before sending the response
+    await cart.populate({
+      path: 'items.product',
+      select: 'name price images modelName brand description',
+      populate: {
+        path: 'category',
+        select: 'name'
+      }
+    });
+    
     res.json(cart.items);
   } catch (error) {
+    console.error('Error updating cart:', error);
     res.status(400).json({ message: error.message });
   }
 });
@@ -104,8 +137,20 @@ router.delete('/:productId', auth, async (req, res) => {
     );
     
     await cart.save();
+    
+    // Populate the cart items before sending the response
+    await cart.populate({
+      path: 'items.product',
+      select: 'name price images modelName brand description',
+      populate: {
+        path: 'category',
+        select: 'name'
+      }
+    });
+    
     res.json(cart.items);
   } catch (error) {
+    console.error('Error removing from cart:', error);
     res.status(400).json({ message: error.message });
   }
 });

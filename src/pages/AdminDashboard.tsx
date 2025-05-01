@@ -14,6 +14,8 @@ import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, Trash2, Search, Pencil } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import AdminOrderManagement from '@/components/AdminOrderManagement';
+import AdminUserManagement from '@/components/AdminUserManagement';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -503,6 +505,26 @@ const AdminDashboard = () => {
   const handleBrandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Show loading toast
+      toast({
+        title: "Processing",
+        description: "Creating brand...",
+        duration: 3000,
+      });
+      
+      // Validate brand name
+      if (!brandForm.name.trim()) {
+        toast({
+          title: "Error",
+          description: "Brand name is required",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+      
+      console.log('Submitting brand:', brandForm.name, 'with logo:', !!brandForm.logo);
+      
       await createBrand({
         name: brandForm.name,
         logo: brandForm.logo
@@ -1248,6 +1270,9 @@ const AdminDashboard = () => {
                       />
                     )}
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {editingBrand ? "Upload a new logo or keep the current one" : "Logo is optional. A default logo will be used if none is provided."}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit">{editingBrand ? 'Update Brand' : 'Add Brand'}</Button>
@@ -1321,26 +1346,12 @@ const AdminDashboard = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="orders">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Orders</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Order management interface will be implemented here.</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="orders" className="space-y-4">
+          <AdminOrderManagement />
         </TabsContent>
 
         <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>User management interface will be implemented here.</p>
-            </CardContent>
-          </Card>
+          <AdminUserManagement />
         </TabsContent>
       </Tabs>
     </div>

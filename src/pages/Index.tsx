@@ -5,6 +5,7 @@ import { getFeaturedProducts, getCategories } from '@/services/data-service';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import RefreshData from '@/components/RefreshData';
 
 const Index = () => {
   const { data: featuredProducts, isLoading: isLoadingProducts } = useQuery({
@@ -26,9 +27,12 @@ const Index = () => {
         <div className="mb-16">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Featured Products</h2>
-            <Button asChild variant="outline">
-              <Link to="/products">View all</Link>
-            </Button>
+            <div className="flex items-center">
+              <RefreshData />
+              <Button asChild variant="outline">
+                <Link to="/products">View all</Link>
+              </Button>
+            </div>
           </div>
           
           {isLoadingProducts ? (

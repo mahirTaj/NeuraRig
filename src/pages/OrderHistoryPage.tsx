@@ -35,7 +35,9 @@ const OrderHistoryPage = () => {
           setOrders([]);
           return;
         }
+        console.log('Fetching orders for user:', user.id);
         const orderList = await getOrders(user.id);
+        console.log('Received orders:', orderList);
         setOrders(orderList);
       } catch (error) {
         console.error('Error loading orders:', error);
@@ -50,8 +52,17 @@ const OrderHistoryPage = () => {
   const handleCancelOrder = async (orderId: string) => {
     if (!user?.id) return;
     
+    console.log('Attempting to cancel order:', orderId);
+    
     try {
+      // Disable the button to prevent multiple clicks
+      const button = document.querySelector(`#cancel-order-${orderId}`);
+      if (button) {
+        (button as HTMLButtonElement).disabled = true;
+      }
+      
       const updatedOrders = await cancelOrder(orderId, user.id);
+      console.log('Received updated orders after cancellation:', updatedOrders);
       setOrders(updatedOrders);
       toast({
         title: "Order Cancelled",
@@ -62,10 +73,16 @@ const OrderHistoryPage = () => {
       console.error('Error cancelling order:', error);
       toast({
         title: "Error",
-        description: "Failed to cancel the order. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to cancel the order. Please try again.",
         variant: "destructive",
         duration: 3000,
       });
+      
+      // Re-enable the button
+      const button = document.querySelector(`#cancel-order-${orderId}`);
+      if (button) {
+        (button as HTMLButtonElement).disabled = false;
+      }
     }
   };
 
@@ -155,6 +172,7 @@ const OrderHistoryPage = () => {
                 {order.status === 'processing' && (
                   <div className="mt-4 flex justify-end">
                     <Button 
+                      id={`cancel-order-${order.id}`}
                       variant="destructive"
                       onClick={() => handleCancelOrder(order.id)}
                     >

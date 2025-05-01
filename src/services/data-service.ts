@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Product, Category, CartItem, Brand } from "@/types";
+import { Product, Category, CartItem, Brand, Order } from "@/types";
 
 export const API_BASE_URL = 'http://localhost:5000/api';
 const API_URL = API_BASE_URL;
@@ -69,7 +69,10 @@ export const getProductById = async (id: string): Promise<Product | null> => {
 
 export const getFeaturedProducts = async (): Promise<Product[]> => {
   try {
-    const response = await api.get('/products/featured');
+    // Add a cache-busting parameter to avoid browser caching
+    const timestamp = new Date().getTime();
+    const response = await api.get(`/products/featured?_=${timestamp}`);
+    console.log('Featured products fetched:', response.data.length);
     return response.data;
   } catch (error) {
     console.error('Error fetching featured products:', error);
@@ -214,14 +217,30 @@ interface Order {
 export const getOrders = async (userId?: string): Promise<Order[]> => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/orders${userId ? `?userId=${userId}` : ''}`, {
+    // Use the my-orders endpoint which is designed to get the current user's orders
+    const response = await fetch(`${API_BASE_URL}/orders/my-orders`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
     
     if (response.ok) {
-      return await response.json();
+      const ordersData = await response.json();
+      // Transform the data to match the frontend Order interface
+      return ordersData.map((order: any) => ({
+        id: order._id,
+        userId: order.user,
+        date: order.createdAt || order.date,
+        total: order.total,
+        items: order.items.map((item: any) => ({
+          name: item.product ? item.product.name : 'Unknown Product',
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shippingAddress: order.shippingAddress,
+        paymentMethod: order.paymentMethod,
+        status: order.status
+      }));
     }
     return [];
   } catch (error) {
@@ -233,19 +252,35 @@ export const getOrders = async (userId?: string): Promise<Order[]> => {
 export const addOrder = async (order: Order): Promise<Order[]> => {
   try {
     const token = localStorage.getItem('token');
+    
+    // Convert client order format to server format
+    const serverOrderFormat = {
+      items: order.items.map(item => ({
+        product: item.productId || item.id, // Ensure product ID is properly set
+        quantity: item.quantity,
+        price: item.price
+      })),
+      total: order.total,
+      shippingAddress: order.shippingAddress,
+      paymentMethod: order.paymentMethod,
+      status: order.status || 'processing'
+    };
+    
     const response = await fetch(`${API_BASE_URL}/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(order)
+      body: JSON.stringify(serverOrderFormat)
     });
 
-    if (response.ok) {
-      return await response.json();
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to add order');
     }
-    throw new Error('Failed to add order');
+    
+    return await response.json();
   } catch (error) {
     console.error('Error adding order:', error);
     throw error;
@@ -254,20 +289,65 @@ export const addOrder = async (order: Order): Promise<Order[]> => {
 
 export const cancelOrder = async (orderId: string, userId: string): Promise<Order[]> => {
   try {
+    console.log(`Attempting to cancel order: ${orderId} for user: ${userId}`);
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ status: 'cancelled' })
-    });
-
-    if (response.ok) {
-      return await response.json();
+    
+    if (!token) {
+      console.error('No authentication token found');
+      throw new Error('Authentication required to cancel order');
     }
-    throw new Error('Failed to cancel order');
+    
+    // Use Axios for this request which might handle CORS better
+    const cancelEndpoint = `${API_BASE_URL}/orders/${orderId}/cancel`;
+    console.log(`Sending request to: ${cancelEndpoint}`);
+    
+    // Try with axios
+    try {
+      const response = await axios.patch(
+        cancelEndpoint,
+        {}, // empty body
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('Cancel order response:', response.data);
+      console.log('Order cancelled successfully, fetching updated orders');
+      // After cancelling, fetch the updated orders
+      return await getOrders();
+    } catch (axiosError) {
+      console.error('Axios error cancelling order:', axiosError);
+      
+      // Try with fetch as fallback
+      console.log('Trying with fetch as fallback');
+      const fetchResponse = await fetch(cancelEndpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log(`Fetch response status: ${fetchResponse.status}`);
+      
+      if (!fetchResponse.ok) {
+        if (fetchResponse.status === 403) {
+          throw new Error('You do not have permission to cancel this order');
+        } else if (fetchResponse.status === 404) {
+          throw new Error('Order not found');
+        } else {
+          const errorText = await fetchResponse.text();
+          console.error('Server error response:', errorText);
+          throw new Error('Failed to cancel order: ' + errorText);
+        }
+      }
+      
+      console.log('Order cancelled successfully via fetch, fetching updated orders');
+      return await getOrders();
+    }
   } catch (error) {
     console.error('Error cancelling order:', error);
     throw error;
@@ -511,11 +591,21 @@ export const getBrands = async (): Promise<Brand[]> => {
 
 export const createBrand = async (brandData: { name: string; logo: File | null }): Promise<Brand> => {
   try {
+    console.log('Creating brand with data:', brandData.name, 'Logo provided:', !!brandData.logo);
+    
     const formData = new FormData();
-    formData.append('name', brandData.name);
+    formData.append('name', brandData.name.trim());
+    
     if (brandData.logo) {
       formData.append('logo', brandData.logo);
     }
+
+    // Log the form data keys being sent
+    const formDataKeys: string[] = [];
+    formData.forEach((value, key) => {
+      formDataKeys.push(key);
+    });
+    console.log('Form data keys being sent:', formDataKeys);
 
     const response = await axios.post(BRANDS_API_URL, formData, {
       headers: {
@@ -523,9 +613,20 @@ export const createBrand = async (brandData: { name: string; logo: File | null }
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
+    
+    console.log('Brand creation successful, response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error creating brand:', error);
+    
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('Server response:', error.response.data);
+      
+      // Extract the error message from the response if available
+      const errorMessage = error.response.data.message || 'Failed to create brand';
+      throw new Error(errorMessage);
+    }
+    
     throw error;
   }
 };
@@ -582,6 +683,158 @@ export const deleteProductImage = async (productId: string, imageIndex: number):
     }
   } catch (error) {
     console.error('Error deleting product image:', error);
+    throw error;
+  }
+};
+
+// Admin functions
+
+export const getAllOrders = async (): Promise<Order[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.get(`${API_BASE_URL}/orders`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all orders:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    throw error;
+  }
+};
+
+export const updateOrderStatus = async (orderId: string, status: string): Promise<Order> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.patch(
+      `${API_BASE_URL}/orders/${orderId}/status`,
+      { status },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    throw error;
+  }
+};
+
+// User management functions
+
+export const getUsers = async (): Promise<any[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.get(`${API_BASE_URL}/users`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    throw error;
+  }
+};
+
+export const getUserById = async (userId: string): Promise<any> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.get(`${API_BASE_URL}/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    throw error;
+  }
+};
+
+export const updateUserRole = async (userId: string, role: 'user' | 'admin'): Promise<any> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.patch(
+      `${API_BASE_URL}/users/${userId}/role`, 
+      { role },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
+    throw error;
+  }
+};
+
+export const getUserOrders = async (userId: string): Promise<any[]> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.get(`${API_BASE_URL}/users/${userId}/orders`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Error details:', error.response?.data);
+    }
     throw error;
   }
 };
