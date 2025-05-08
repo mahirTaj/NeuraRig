@@ -14,8 +14,10 @@ import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import PcBuilderChatbot from '@/components/PcBuilderChatbot';
 
-interface SelectedPart {
+// Export the interface so it can be imported in the chatbot component
+export interface SelectedPart {
   product: Product;
   quantity: number;
 }
@@ -545,6 +547,9 @@ const PcBuilderPage = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* AI Recommendation Chatbot */}
+      <PcBuilderChatbot selectedParts={selectedParts} />
     </div>
   );
 };
