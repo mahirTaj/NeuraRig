@@ -143,9 +143,12 @@ const CartPage = () => {
                     <div className="md:col-span-6 flex gap-4">
                       <Link to={`/product/${item.product?._id}`} className="flex-shrink-0">
                         <img 
-                          src={item.product?.images?.[0] || '/placeholder.svg'} 
+                          src={item.product?.images?.[0]?.startsWith('http') ? item.product.images[0] : `http://localhost:5000${item.product?.images?.[0]}`} 
                           alt={item.product?.name || 'Product'} 
                           className="w-20 h-20 object-cover bg-gray-100 rounded"
+                          onError={(e) => {
+                            e.currentTarget.src = 'http://localhost:5000/public/placeholder.svg';
+                          }}
                         />
                       </Link>
                       <div className="flex flex-col">

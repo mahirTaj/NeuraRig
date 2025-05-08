@@ -32,22 +32,32 @@ const CategoriesPage = () => {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Categories</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories?.map((category) => (
-            <Link key={category.id} to={`/category/${category.slug}`}>
-              <Card className="h-full hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="aspect-square w-full bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                    <img 
-                      src={category.image} 
-                      alt={category.name}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  </div>
-                  <h2 className="text-xl font-semibold">{category.name}</h2>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+          {categories?.map((category) => {
+            // Construct the image URL
+            const imageUrl = category.image?.startsWith('http') 
+              ? category.image 
+              : `http://localhost:5000${category.image}`;
+
+            return (
+              <Link key={category.id} to={`/category/${category.slug}`}>
+                <Card className="h-full hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="aspect-square w-full bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
+                      <img 
+                        src={imageUrl} 
+                        alt={category.name}
+                        className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.src = 'http://localhost:5000/public/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                    <h2 className="text-xl font-semibold">{category.name}</h2>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

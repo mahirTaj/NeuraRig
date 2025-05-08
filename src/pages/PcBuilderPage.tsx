@@ -47,6 +47,10 @@ const PcBuilderPage = () => {
   const gpuCategory = findCategoryByName('gpu');
   const ramCategory = findCategoryByName('ram');
   const storageCategory = findCategoryByName('ssd') || findCategoryByName('storage');
+  const motherboardCategory = findCategoryByName('motherboard');
+  const psuCategory = findCategoryByName('psu') || findCategoryByName('power supply');
+  const caseCategory = findCategoryByName('case');
+  const coolingCategory = findCategoryByName('cooling');
   
   // Log categories for debugging
   useEffect(() => {
@@ -56,8 +60,12 @@ const PcBuilderPage = () => {
       console.log('GPU category:', gpuCategory?.name);
       console.log('RAM category:', ramCategory?.name);
       console.log('Storage category:', storageCategory?.name);
+      console.log('Motherboard category:', motherboardCategory?.name);
+      console.log('PSU category:', psuCategory?.name);
+      console.log('Case category:', caseCategory?.name);
+      console.log('Cooling category:', coolingCategory?.name);
     }
-  }, [categories, cpuCategory, gpuCategory, ramCategory, storageCategory]);
+  }, [categories, cpuCategory, gpuCategory, ramCategory, storageCategory, motherboardCategory, psuCategory, caseCategory, coolingCategory]);
   
   // Get products from each category
   const { data: cpuProducts, isLoading: cpuLoading } = useQuery({
@@ -83,8 +91,33 @@ const PcBuilderPage = () => {
     queryFn: () => storageCategory ? getProductsByCategorySlug(storageCategory.slug) : Promise.resolve([]),
     enabled: !!storageCategory
   });
+
+  const { data: motherboardProducts, isLoading: motherboardLoading } = useQuery({
+    queryKey: ['products', 'motherboard', motherboardCategory?.slug],
+    queryFn: () => motherboardCategory ? getProductsByCategorySlug(motherboardCategory.slug) : Promise.resolve([]),
+    enabled: !!motherboardCategory
+  });
+
+  const { data: psuProducts, isLoading: psuLoading } = useQuery({
+    queryKey: ['products', 'psu', psuCategory?.slug],
+    queryFn: () => psuCategory ? getProductsByCategorySlug(psuCategory.slug) : Promise.resolve([]),
+    enabled: !!psuCategory
+  });
+
+  const { data: caseProducts, isLoading: caseLoading } = useQuery({
+    queryKey: ['products', 'case', caseCategory?.slug],
+    queryFn: () => caseCategory ? getProductsByCategorySlug(caseCategory.slug) : Promise.resolve([]),
+    enabled: !!caseCategory
+  });
+
+  const { data: coolingProducts, isLoading: coolingLoading } = useQuery({
+    queryKey: ['products', 'cooling', coolingCategory?.slug],
+    queryFn: () => coolingCategory ? getProductsByCategorySlug(coolingCategory.slug) : Promise.resolve([]),
+    enabled: !!coolingCategory
+  });
   
-  const isLoading = categoriesLoading || cpuLoading || gpuLoading || ramLoading || storageLoading;
+  const isLoading = categoriesLoading || cpuLoading || gpuLoading || ramLoading || storageLoading || 
+    motherboardLoading || psuLoading || caseLoading || coolingLoading;
   
   // Log products for debugging
   useEffect(() => {
@@ -92,7 +125,11 @@ const PcBuilderPage = () => {
     console.log('GPU products:', gpuProducts?.length || 0);
     console.log('RAM products:', ramProducts?.length || 0);
     console.log('Storage products:', storageProducts?.length || 0);
-  }, [cpuProducts, gpuProducts, ramProducts, storageProducts]);
+    console.log('Motherboard products:', motherboardProducts?.length || 0);
+    console.log('PSU products:', psuProducts?.length || 0);
+    console.log('Case products:', caseProducts?.length || 0);
+    console.log('Cooling products:', coolingProducts?.length || 0);
+  }, [cpuProducts, gpuProducts, ramProducts, storageProducts, motherboardProducts, psuProducts, caseProducts, coolingProducts]);
   
   const getComponentOptions = (type: string): Product[] => {
     switch (type.toLowerCase()) {
@@ -100,6 +137,10 @@ const PcBuilderPage = () => {
       case 'gpu': return gpuProducts || [];
       case 'ram': return ramProducts || [];
       case 'storage': return storageProducts || [];
+      case 'motherboard': return motherboardProducts || [];
+      case 'psu': return psuProducts || [];
+      case 'case': return caseProducts || [];
+      case 'cooling': return coolingProducts || [];
       default: return [];
     }
   };
@@ -110,6 +151,10 @@ const PcBuilderPage = () => {
       case 'gpu': return gpuCategory;
       case 'ram': return ramCategory;
       case 'storage': return storageCategory;
+      case 'motherboard': return motherboardCategory;
+      case 'psu': return psuCategory;
+      case 'case': return caseCategory;
+      case 'cooling': return coolingCategory;
       default: return undefined;
     }
   };
@@ -381,6 +426,170 @@ const PcBuilderPage = () => {
                     )}
                   </div>
                 </div>
+                
+                <Separator />
+                
+                {/* Motherboard */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-neura-100 text-neura-600 rounded-full flex items-center justify-center">
+                    <CircuitBoard className="h-6 w-6" />
+                  </div>
+                  
+                  <div className="flex-grow">
+                    <h3 className="font-medium">Motherboard</h3>
+                    
+                    {selectedParts.motherboard ? (
+                      <div className="flex justify-between items-center mt-1">
+                        <div>
+                          <p className="text-sm">{selectedParts.motherboard.product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedParts.motherboard.quantity > 1 ? `${selectedParts.motherboard.quantity}x ` : ''}
+                            ${selectedParts.motherboard.product.price.toFixed(2)}
+                            {selectedParts.motherboard.quantity > 1 ? ` ($${(selectedParts.motherboard.product.price * selectedParts.motherboard.quantity).toFixed(2)})` : ''}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removePart('motherboard')}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-sm text-muted-foreground">Select a motherboard</p>
+                        <Button variant="outline" size="sm" onClick={() => openComponentSelector('motherboard')}>
+                          <Plus className="h-4 w-4 mr-1" /> Add Motherboard
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                {/* Power Supply */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-neura-100 text-neura-600 rounded-full flex items-center justify-center">
+                    <Box className="h-6 w-6" />
+                  </div>
+                  
+                  <div className="flex-grow">
+                    <h3 className="font-medium">Power Supply</h3>
+                    
+                    {selectedParts.psu ? (
+                      <div className="flex justify-between items-center mt-1">
+                        <div>
+                          <p className="text-sm">{selectedParts.psu.product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedParts.psu.quantity > 1 ? `${selectedParts.psu.quantity}x ` : ''}
+                            ${selectedParts.psu.product.price.toFixed(2)}
+                            {selectedParts.psu.quantity > 1 ? ` ($${(selectedParts.psu.product.price * selectedParts.psu.quantity).toFixed(2)})` : ''}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removePart('psu')}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-sm text-muted-foreground">Select a power supply</p>
+                        <Button variant="outline" size="sm" onClick={() => openComponentSelector('psu')}>
+                          <Plus className="h-4 w-4 mr-1" /> Add Power Supply
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                {/* Case */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-neura-100 text-neura-600 rounded-full flex items-center justify-center">
+                    <Box className="h-6 w-6" />
+                  </div>
+                  
+                  <div className="flex-grow">
+                    <h3 className="font-medium">Case</h3>
+                    
+                    {selectedParts.case ? (
+                      <div className="flex justify-between items-center mt-1">
+                        <div>
+                          <p className="text-sm">{selectedParts.case.product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedParts.case.quantity > 1 ? `${selectedParts.case.quantity}x ` : ''}
+                            ${selectedParts.case.product.price.toFixed(2)}
+                            {selectedParts.case.quantity > 1 ? ` ($${(selectedParts.case.product.price * selectedParts.case.quantity).toFixed(2)})` : ''}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removePart('case')}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-sm text-muted-foreground">Select a case</p>
+                        <Button variant="outline" size="sm" onClick={() => openComponentSelector('case')}>
+                          <Plus className="h-4 w-4 mr-1" /> Add Case
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                {/* Cooling */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-neura-100 text-neura-600 rounded-full flex items-center justify-center">
+                    <Box className="h-6 w-6" />
+                  </div>
+                  
+                  <div className="flex-grow">
+                    <h3 className="font-medium">Cooling</h3>
+                    
+                    {selectedParts.cooling ? (
+                      <div className="flex justify-between items-center mt-1">
+                        <div>
+                          <p className="text-sm">{selectedParts.cooling.product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedParts.cooling.quantity > 1 ? `${selectedParts.cooling.quantity}x ` : ''}
+                            ${selectedParts.cooling.product.price.toFixed(2)}
+                            {selectedParts.cooling.quantity > 1 ? ` ($${(selectedParts.cooling.product.price * selectedParts.cooling.quantity).toFixed(2)})` : ''}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removePart('cooling')}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-sm text-muted-foreground">Select cooling</p>
+                        <Button variant="outline" size="sm" onClick={() => openComponentSelector('cooling')}>
+                          <Plus className="h-4 w-4 mr-1" /> Add Cooling
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -453,9 +662,12 @@ const PcBuilderPage = () => {
                     <div className="aspect-video overflow-hidden bg-gray-100 flex items-center justify-center">
                       {component.images && component.images.length > 0 ? (
                         <img 
-                          src={component.images[0]} 
+                          src={component.images[0].startsWith('http') ? component.images[0] : `http://localhost:5000${component.images[0]}`}
                           alt={component.name}
                           className="object-contain h-full w-full"
+                          onError={(e) => {
+                            e.currentTarget.src = 'http://localhost:5000/public/placeholder.svg';
+                          }}
                         />
                       ) : (
                         <div className="text-gray-400">No image</div>

@@ -73,18 +73,6 @@ const Index = () => {
             </div>
           )}
         </div>
-        
-        {/* AI PC Builder Promotion */}
-        <div className="bg-gray-100 rounded-lg p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">Let AI Build Your Perfect PC</h2>
-          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Our advanced AI can recommend the perfect PC configuration based on your specific needs,
-            whether you're a gamer, content creator, or professional.
-          </p>
-          <Button asChild size="lg" className="bg-neura-600 hover:bg-neura-700">
-            <Link to="/pc-builder/ai">Try AI Builder</Link>
-          </Button>
-        </div>
       </div>
     </div>
   );
