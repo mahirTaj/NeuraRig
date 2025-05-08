@@ -16,6 +16,7 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const isMobile = useIsMobile();
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -43,6 +44,17 @@ const Navbar: React.FC = () => {
     logout();
     navigate('/');
   };
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      if (isMobile) {
+        setIsMenuOpen(false);
+      }
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -56,14 +68,17 @@ const Navbar: React.FC = () => {
         {/* Search on desktop */}
         {!isMobile && (
           <div className="flex-1 max-w-md mx-4">
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search products..."
                 className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+              <button type="submit" className="sr-only">Search</button>
+            </form>
           </div>
         )}
 
@@ -143,14 +158,17 @@ const Navbar: React.FC = () => {
       {/* Mobile Menu */}
       {isMobile && isMenuOpen && (
         <div className="fixed top-[72px] left-0 right-0 bottom-0 bg-white z-50 p-4 flex flex-col gap-4 animate-fade-in">
-          <div className="relative mb-4">
+          <form onSubmit={handleSearch} className="relative mb-4">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search products..."
               className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
+            <button type="submit" className="sr-only">Search</button>
+          </form>
           <Link 
             to="/" 
             className="p-3 border-b hover:bg-muted transition-colors"
