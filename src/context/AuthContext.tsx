@@ -4,7 +4,7 @@ import { API_BASE_URL } from '@/services/data-service';
 
 interface User {
   id: string;
-  username: string;
+  name: string;
   email: string;
   role: string;
 }
@@ -13,7 +13,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -52,16 +52,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('userRole', user.role);
       setToken(token);
       setUser(user);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Login error:', error.response?.data || error.message);
+      if (error.response?.status === 401) {
+        throw new Error('Invalid email or password');
+      }
+      throw new Error('Failed to login. Please try again.');
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', {
-        username,
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
+        name,
         email,
         password,
       });
@@ -70,9 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('userRole', user.role);
       setToken(token);
       setUser(user);
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Registration error:', error.response?.data || error.message);
+      if (error.response?.status === 400) {
+        const details = error.response.data.details;
+        if (details) {
+          throw new Error(Object.values(details).filter(Boolean).join(', '));
+        }
+      }
+      throw new Error('Failed to register. Please try again.');
     }
   };
 

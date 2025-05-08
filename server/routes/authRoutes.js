@@ -7,35 +7,45 @@ const bcrypt = require('bcrypt');
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { name, email, password } = req.body;
 
     // Validate input
-    if (!username || !email || !password) {
+    if (!name || !email || !password) {
       return res.status(400).json({ 
         message: 'Missing required fields',
         details: {
-          username: !username ? 'Username is required' : null,
+          name: !name ? 'Name is required' : null,
           email: !email ? 'Email is required' : null,
           password: !password ? 'Password is required' : null
         }
       });
     }
 
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: 'Invalid password',
+        details: {
+          password: 'Password must be at least 6 characters long'
+        }
+      });
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    const existingUser = await User.findOne({ $or: [{ email }, { name }] });
     if (existingUser) {
       return res.status(400).json({ 
         message: 'User already exists',
         details: {
           email: existingUser.email === email ? 'Email already in use' : null,
-          username: existingUser.username === username ? 'Username already taken' : null
+          name: existingUser.name === name ? 'Name already taken' : null
         }
       });
     }
 
     // Create new user
     const user = new User({
-      username,
+      name,
       email,
       password
     });
@@ -54,8 +64,9 @@ router.post('/register', async (req, res) => {
       token,
       user: {
         id: user._id,
-        username: user.username,
-        email: user.email
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
@@ -74,27 +85,34 @@ router.post('/register', async (req, res) => {
 // Register admin user
 router.post('/register-admin', async (req, res) => {
   try {
-    const { username, email, password, adminKey } = req.body;
+    const { name, email, password, adminKey } = req.body;
 
     // Check if admin key is valid
     if (adminKey !== process.env.ADMIN_SECRET_KEY) {
       return res.status(401).json({ message: 'Invalid admin key' });
     }
 
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: 'Invalid password',
+        details: {
+          password: 'Password must be at least 6 characters long'
+        }
+      });
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    const existingUser = await User.findOne({ $or: [{ email }, { name }] });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // Create admin user
     const user = new User({
-      username,
+      name,
       email,
-      password: hashedPassword,
+      password,
       role: 'admin'
     });
 
@@ -112,7 +130,7 @@ router.post('/register-admin', async (req, res) => {
       token,
       user: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
         role: user.role
       }
@@ -152,7 +170,7 @@ router.post('/login', async (req, res) => {
       token,
       user: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
         role: user.role
       }
@@ -180,7 +198,7 @@ router.get('/me', async (req, res) => {
 
     res.json({
       id: user._id,
-      username: user.username,
+      name: user.name,
       email: user.email,
       role: user.role
     });
