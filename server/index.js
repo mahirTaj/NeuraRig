@@ -19,6 +19,18 @@ if (!require('fs').existsSync(uploadsDir)) {
   require('fs').mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Create categories directory if it doesn't exist
+const categoriesDir = path.join(uploadsDir, 'categories');
+if (!require('fs').existsSync(categoriesDir)) {
+  require('fs').mkdirSync(categoriesDir, { recursive: true });
+}
+
+// Create products directory if it doesn't exist
+const productsDir = path.join(uploadsDir, 'products');
+if (!require('fs').existsSync(productsDir)) {
+  require('fs').mkdirSync(productsDir, { recursive: true });
+}
+
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(uploadsDir));
 // Serve static files from the public directory

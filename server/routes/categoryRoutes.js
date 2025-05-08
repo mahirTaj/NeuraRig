@@ -20,7 +20,8 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'category-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -46,8 +47,13 @@ router.get('/', async (req, res) => {
   try {
     console.log('Fetching all categories...');
     const categories = await Category.find().select('name slug image specifications createdAt updatedAt');
-    console.log('Found categories:', categories);
-    res.json(categories);
+    // Transform image paths to include full URL
+    const transformedCategories = categories.map(category => ({
+      ...category.toObject(),
+      image: category.image.startsWith('http') ? category.image : `http://localhost:5000${category.image}`
+    }));
+    console.log('Found categories:', transformedCategories);
+    res.json(transformedCategories);
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ message: error.message });
@@ -61,7 +67,12 @@ router.get('/:id', async (req, res) => {
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
-    res.json(category);
+    // Transform image path to include full URL
+    const transformedCategory = {
+      ...category.toObject(),
+      image: category.image.startsWith('http') ? category.image : `http://localhost:5000${category.image}`
+    };
+    res.json(transformedCategory);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -74,7 +85,12 @@ router.get('/slug/:slug', async (req, res) => {
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
-    res.json(category);
+    // Transform image path to include full URL
+    const transformedCategory = {
+      ...category.toObject(),
+      image: category.image.startsWith('http') ? category.image : `http://localhost:5000${category.image}`
+    };
+    res.json(transformedCategory);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -150,8 +166,13 @@ router.post('/', (req, res, next) => {
 
       try {
         const savedCategory = await category.save();
-        console.log('Category created successfully:', savedCategory);
-        res.status(201).json(savedCategory);
+        // Transform image path to include full URL
+        const transformedCategory = {
+          ...savedCategory.toObject(),
+          image: `http://localhost:5000${savedCategory.image}`
+        };
+        console.log('Category created successfully:', transformedCategory);
+        res.status(201).json(transformedCategory);
       } catch (saveError) {
         console.error('Error saving category to database:', saveError);
         console.error('Error details:', {
@@ -217,7 +238,13 @@ router.put('/:id', auth, upload, async (req, res) => {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    res.json(updatedCategory);
+    // Transform image path to include full URL
+    const transformedCategory = {
+      ...updatedCategory.toObject(),
+      image: updatedCategory.image.startsWith('http') ? updatedCategory.image : `http://localhost:5000${updatedCategory.image}`
+    };
+
+    res.json(transformedCategory);
   } catch (error) {
     console.error('Error updating category:', error);
     res.status(500).json({ 

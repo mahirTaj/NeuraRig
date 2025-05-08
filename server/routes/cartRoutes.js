@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
-const auth = require('../middleware/auth');
 
 // Get user's cart
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     let cart = await Cart.findOne({ user: req.user.id })
       .populate({
@@ -30,7 +29,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Add item to cart
-router.post('/', auth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     
@@ -79,7 +78,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update cart item quantity
-router.put('/:productId', auth, async (req, res) => {
+router.put('/:productId', async (req, res) => {
   try {
     const { quantity } = req.body;
     const { productId } = req.params;
@@ -123,7 +122,7 @@ router.put('/:productId', auth, async (req, res) => {
 });
 
 // Remove item from cart
-router.delete('/:productId', auth, async (req, res) => {
+router.delete('/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
     
@@ -156,7 +155,7 @@ router.delete('/:productId', auth, async (req, res) => {
 });
 
 // Clear cart
-router.delete('/', auth, async (req, res) => {
+router.delete('/', async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) {
