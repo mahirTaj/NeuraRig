@@ -20,6 +20,34 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Search products
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    const searchRegex = new RegExp(q, 'i');
+    
+    const products = await Product.find({
+      $or: [
+        { name: searchRegex },
+        { description: searchRegex },
+        { modelName: searchRegex }
+      ]
+    })
+    .populate('category', 'name slug')
+    .populate('brand', 'name logo');
+    
+    console.log(`Search for "${q}" found ${products.length} products`);
+    res.json(products);
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get featured products
 router.get('/featured', async (req, res) => {
   try {
