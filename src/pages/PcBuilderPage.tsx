@@ -825,7 +825,10 @@ const PcBuilderPage = () => {
       </Dialog>
 
       {/* AI Recommendation Chatbot */}
-      <PcBuilderChatbot selectedParts={selectedParts} />
+      <PcBuilderChatbot 
+        selectedParts={selectedParts} 
+        onSelectPart={selectPart} 
+      />
     </div>
   );
 };
