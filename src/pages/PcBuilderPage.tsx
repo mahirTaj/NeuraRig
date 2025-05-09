@@ -36,34 +36,48 @@ const PcBuilderPage = () => {
   
   // Function to find a category by partial name match
   const findCategoryByName = (name: string): Category | undefined => {
-    return categories?.find(category => 
-      category.name.toLowerCase().includes(name.toLowerCase()) ||
-      category.slug.toLowerCase().includes(name.toLowerCase())
+    if (!categories) return undefined;
+    
+    // Convert search term to lowercase for case-insensitive comparison
+    const searchTerm = name.toLowerCase();
+    
+    // Try to find an exact match first
+    const exactMatch = categories.find(category => 
+      category.name.toLowerCase() === searchTerm ||
+      category.slug.toLowerCase() === searchTerm
+    );
+    
+    if (exactMatch) return exactMatch;
+    
+    // Then try to find a partial match
+    return categories.find(category => 
+      category.name.toLowerCase().includes(searchTerm) ||
+      category.slug.toLowerCase().includes(searchTerm)
     );
   };
   
   // Find the specific component categories
-  const cpuCategory = findCategoryByName('cpu');
-  const gpuCategory = findCategoryByName('gpu');
-  const ramCategory = findCategoryByName('ram');
-  const storageCategory = findCategoryByName('ssd') || findCategoryByName('storage');
+  const cpuCategory = findCategoryByName('cpu') || findCategoryByName('processor');
+  const gpuCategory = findCategoryByName('gpu') || findCategoryByName('graphics');
+  const ramCategory = findCategoryByName('ram') || findCategoryByName('memory');
+  const storageCategory = findCategoryByName('storage') || findCategoryByName('ssd') || findCategoryByName('hdd');
   const motherboardCategory = findCategoryByName('motherboard');
   const psuCategory = findCategoryByName('psu') || findCategoryByName('power supply');
-  const caseCategory = findCategoryByName('case');
-  const coolingCategory = findCategoryByName('cooling');
+  const caseCategory = findCategoryByName('case') || findCategoryByName('chassis') || findCategoryByName('pc case') || findCategoryByName('casing');
+  const coolingCategory = findCategoryByName('cooling') || findCategoryByName('cooler') || findCategoryByName('fan');
   
   // Log categories for debugging
   useEffect(() => {
     if (categories) {
-      console.log('All categories:', categories.map(c => c.name));
-      console.log('CPU category:', cpuCategory?.name);
-      console.log('GPU category:', gpuCategory?.name);
-      console.log('RAM category:', ramCategory?.name);
-      console.log('Storage category:', storageCategory?.name);
-      console.log('Motherboard category:', motherboardCategory?.name);
-      console.log('PSU category:', psuCategory?.name);
-      console.log('Case category:', caseCategory?.name);
-      console.log('Cooling category:', coolingCategory?.name);
+      console.log('All categories:', categories.map(c => ({name: c.name, slug: c.slug})));
+      console.log('CPU category:', cpuCategory ? {name: cpuCategory.name, slug: cpuCategory.slug} : 'Not found');
+      console.log('GPU category:', gpuCategory ? {name: gpuCategory.name, slug: gpuCategory.slug} : 'Not found');
+      console.log('RAM category:', ramCategory ? {name: ramCategory.name, slug: ramCategory.slug} : 'Not found');
+      console.log('Storage category:', storageCategory ? {name: storageCategory.name, slug: storageCategory.slug} : 'Not found');
+      console.log('Motherboard category:', motherboardCategory ? {name: motherboardCategory.name, slug: motherboardCategory.slug} : 'Not found');
+      console.log('PSU category:', psuCategory ? {name: psuCategory.name, slug: psuCategory.slug} : 'Not found');
+      console.log('Case category:', caseCategory ? {name: caseCategory.name, slug: caseCategory.slug} : 'Not found');
+      console.log('Cooling category:', coolingCategory ? {name: coolingCategory.name, slug: coolingCategory.slug} : 'Not found');
     }
   }, [categories, cpuCategory, gpuCategory, ramCategory, storageCategory, motherboardCategory, psuCategory, caseCategory, coolingCategory]);
   
@@ -121,18 +135,30 @@ const PcBuilderPage = () => {
   
   // Log products for debugging
   useEffect(() => {
-    console.log('CPU products:', cpuProducts?.length || 0);
-    console.log('GPU products:', gpuProducts?.length || 0);
-    console.log('RAM products:', ramProducts?.length || 0);
-    console.log('Storage products:', storageProducts?.length || 0);
-    console.log('Motherboard products:', motherboardProducts?.length || 0);
-    console.log('PSU products:', psuProducts?.length || 0);
-    console.log('Case products:', caseProducts?.length || 0);
-    console.log('Cooling products:', coolingProducts?.length || 0);
-  }, [cpuProducts, gpuProducts, ramProducts, storageProducts, motherboardProducts, psuProducts, caseProducts, coolingProducts]);
+    console.log('CPU products:', cpuProducts?.length || 0, cpuCategory?.slug);
+    console.log('GPU products:', gpuProducts?.length || 0, gpuCategory?.slug);
+    console.log('RAM products:', ramProducts?.length || 0, ramCategory?.slug);
+    console.log('Storage products:', storageProducts?.length || 0, storageCategory?.slug);
+    console.log('Motherboard products:', motherboardProducts?.length || 0, motherboardCategory?.slug);
+    console.log('PSU products:', psuProducts?.length || 0, psuCategory?.slug);
+    console.log('Case products:', caseProducts?.length || 0, caseCategory?.slug);
+    console.log('Cooling products:', coolingProducts?.length || 0, coolingCategory?.slug);
+    
+    // Check if we have some sample products to ensure products are loading correctly
+    if (caseProducts && caseProducts.length > 0) {
+      console.log('First case product:', caseProducts[0].name);
+    }
+    if (coolingProducts && coolingProducts.length > 0) {
+      console.log('First cooling product:', coolingProducts[0].name);
+    }
+  }, [cpuProducts, gpuProducts, ramProducts, storageProducts, motherboardProducts, psuProducts, caseProducts, coolingProducts, 
+      cpuCategory, gpuCategory, ramCategory, storageCategory, motherboardCategory, psuCategory, caseCategory, coolingCategory]);
   
   const getComponentOptions = (type: string): Product[] => {
-    switch (type.toLowerCase()) {
+    const normalizedType = type.toLowerCase();
+    
+    // First try direct match based on type
+    switch (normalizedType) {
       case 'cpu': return cpuProducts || [];
       case 'gpu': return gpuProducts || [];
       case 'ram': return ramProducts || [];
@@ -141,12 +167,29 @@ const PcBuilderPage = () => {
       case 'psu': return psuProducts || [];
       case 'case': return caseProducts || [];
       case 'cooling': return coolingProducts || [];
-      default: return [];
     }
+    
+    // If no direct match, try to match based on similar names
+    if (normalizedType.includes('cool') || normalizedType.includes('fan')) {
+      return coolingProducts || [];
+    }
+    if (normalizedType.includes('case') || normalizedType.includes('chas') || normalizedType.includes('casing')) {
+      return caseProducts || [];
+    }
+    if (normalizedType.includes('power') || normalizedType.includes('psu')) {
+      return psuProducts || [];
+    }
+    
+    // Fallback to empty array
+    console.warn(`No products found for type: ${type}`);
+    return [];
   };
   
   const getCategoryByType = (type: string): Category | undefined => {
-    switch (type.toLowerCase()) {
+    const normalizedType = type.toLowerCase();
+    
+    // First try direct match based on type
+    switch (normalizedType) {
       case 'cpu': return cpuCategory;
       case 'gpu': return gpuCategory;
       case 'ram': return ramCategory;
@@ -155,8 +198,29 @@ const PcBuilderPage = () => {
       case 'psu': return psuCategory;
       case 'case': return caseCategory;
       case 'cooling': return coolingCategory;
-      default: return undefined;
     }
+    
+    // If no direct match, try to match based on similar names
+    if (normalizedType.includes('cool') || normalizedType.includes('fan')) {
+      return coolingCategory;
+    }
+    if (normalizedType.includes('case') || normalizedType.includes('chas') || normalizedType.includes('casing')) {
+      return caseCategory;
+    }
+    if (normalizedType.includes('power') || normalizedType.includes('psu')) {
+      return psuCategory;
+    }
+    
+    // If the component type doesn't match any predefined categories,
+    // try a more general search through all categories
+    if (categories) {
+      return categories.find(category => 
+        category.name.toLowerCase().includes(normalizedType) ||
+        category.slug.toLowerCase().includes(normalizedType)
+      );
+    }
+    
+    return undefined;
   };
   
   // Reset quantities when opening a new component selector
