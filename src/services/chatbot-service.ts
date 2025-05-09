@@ -1,31 +1,12 @@
 // Service for interacting with GROQ API for product recommendations
 import axios from 'axios';
+import { getProducts } from '@/services/data-service';
+import { Product } from '@/types';
 
 // Define the interface for chat messages
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
-}
-
-// Define the interface for GROQ API response
-interface GroqResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: {
-    index: number;
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string;
-  }[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
 }
 
 // API key for GROQ
@@ -40,123 +21,150 @@ const groqAxios = axios.create({
     'Authorization': `Bearer ${GROQ_API_KEY}`,
     'Accept': 'application/json',
   },
-  timeout: 30000 // 30 second timeout
+  timeout: 25000 // 25 second timeout
 });
 
+// Cache for product data to reduce database calls
+let productCache: {
+  products: Product[];
+  timestamp: number;
+} | null = null;
+
+// Cache for API responses to reduce API calls
+const responseCache = new Map<string, { response: string; timestamp: number }>();
+
 /**
- * Fallback responses for when the API is not available
- * These are basic recommendations based on common PC builds
+ * Fetch all products with caching
  */
-const fallbackResponses: Record<string, string> = {
-  gaming: `For gaming PCs, I recommend:
+const getAllProducts = async (): Promise<Product[]> => {
+  // Check if we have a fresh cache (less than 5 minutes old)
+  const now = Date.now();
+  if (productCache && (now - productCache.timestamp < 5 * 60 * 1000)) {
+    console.log('Using cached product data');
+    return productCache.products;
+  }
   
-  - CPU: AMD Ryzen 7 5800X or Intel Core i7-12700K
-  - GPU: NVIDIA RTX 3080 or AMD Radeon RX 6800 XT
-  - RAM: 16GB or 32GB DDR4-3600 MHz (2x8GB or 2x16GB)
-  - Storage: 1TB NVMe SSD + 2TB HDD for game library
-  
-  This setup will handle most modern games at 1440p or 4K with high frame rates.`,
-  
-  budget: `For a budget PC build, consider:
-  
-  - CPU: AMD Ryzen 5 5600G or Intel Core i5-12400
-  - GPU: NVIDIA GTX 1660 Super or AMD RX 6600
-  - RAM: 16GB DDR4-3200 MHz (2x8GB)
-  - Storage: 500GB NVMe SSD
-  
-  This setup provides good performance for 1080p gaming and everyday tasks while staying affordable.`,
-  
-  workstation: `For a workstation/content creation PC, I suggest:
-  
-  - CPU: AMD Ryzen 9 5950X or Intel Core i9-12900K
-  - GPU: NVIDIA RTX 3090 or AMD Radeon Pro W6800
-  - RAM: 64GB DDR4-3600 MHz (4x16GB)
-  - Storage: 2TB NVMe SSD + 4TB HDD for project files
-  
-  This configuration will handle demanding workloads like video editing, 3D rendering, and software development.`,
-  
-  streaming: `For a streaming/content creation PC, I recommend:
-  
-  - CPU: AMD Ryzen 7 5800X3D or Intel Core i7-12700K
-  - GPU: NVIDIA RTX 3070 Ti or AMD RX 6800
-  - RAM: 32GB DDR4-3600 MHz (2x16GB)
-  - Storage: 1TB NVMe SSD + 2TB HDD for recordings
-  
-  This setup will handle gaming while simultaneously encoding your stream.`,
-  
-  office: `For an office/productivity PC, consider:
-  
-  - CPU: AMD Ryzen 5 5600G or Intel Core i5-12400
-  - GPU: Integrated graphics or NVIDIA GTX 1650
-  - RAM: 16GB DDR4-3200 MHz (2x8GB)
-  - Storage: 500GB NVMe SSD
-  
-  This configuration is perfect for web browsing, office applications, and light multitasking.`,
-  
-  default: `I can recommend PC components based on your needs. What will you be using your PC for? Gaming, content creation, office work, or something else? 
-  
-  Also, do you have a specific budget in mind?`
+  // Otherwise fetch fresh products
+  console.log('Fetching fresh product data');
+  try {
+    const products = await getProducts();
+    
+    // Update cache
+    productCache = {
+      products,
+      timestamp: now
+    };
+    
+    return products;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    
+    // Fall back to cached data if available, even if older than 5 minutes
+    if (productCache) {
+      console.log('Falling back to older cached product data');
+      return productCache.products;
+    }
+    
+    throw error;
+  }
 };
 
 /**
- * Get a fallback response based on keywords in the user query
- * @param query The user's query
- * @returns A fallback recommendation
+ * Format product data to be more readable for GROQ API
  */
-const getFallbackRecommendation = (query: string): string => {
-  query = query.toLowerCase();
+const formatProductsForAI = (products: Product[]): string => {
+  // Group products by category
+  const productsByCategory: Record<string, Product[]> = {};
   
-  if (query.includes('gaming') || query.includes('game') || query.includes('fps')) {
-    return fallbackResponses.gaming;
+  products.forEach(product => {
+    const category = typeof product.category === 'string' 
+      ? product.category 
+      : product.category.toString();
+    
+    if (!productsByCategory[category]) {
+      productsByCategory[category] = [];
+    }
+    
+    productsByCategory[category].push(product);
+  });
+  
+  // Format the output
+  let formattedOutput = "AVAILABLE PRODUCTS IN INVENTORY:\n\n";
+  
+  for (const [category, categoryProducts] of Object.entries(productsByCategory)) {
+    formattedOutput += `${category.toUpperCase()} PRODUCTS:\n`;
+    
+    categoryProducts.forEach(product => {
+      // Ensure consistent formatting for easy extraction by the chatbot component
+      formattedOutput += `- ID: ${product._id}, Name: ${product.name}, Price: $${product.price}\n`;
+    });
+    
+    formattedOutput += '\n';
   }
   
-  if (query.includes('budget') || query.includes('cheap') || query.includes('affordable')) {
-    return fallbackResponses.budget;
+  return formattedOutput;
+};
+
+/**
+ * Retry logic for API calls with exponential backoff
+ */
+const retryApiCall = async <T>(
+  fn: () => Promise<T>, 
+  maxRetries: number = 3,
+  baseDelayMs: number = 1000
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Attempt the call
+      return await fn();
+    } catch (error) {
+      console.error(`API call failed (attempt ${attempt + 1}/${maxRetries}):`, error);
+      lastError = error;
+      
+      // Don't wait on the last attempt
+      if (attempt < maxRetries - 1) {
+        // Exponential backoff with jitter
+        const delayMs = baseDelayMs * Math.pow(2, attempt) * (0.5 + Math.random() * 0.5);
+        console.log(`Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
   }
   
-  if (query.includes('work') || query.includes('render') || query.includes('3d') || 
-      query.includes('video') || query.includes('editing')) {
-    return fallbackResponses.workstation;
-  }
-  
-  if (query.includes('stream') || query.includes('content') || query.includes('youtube') || 
-      query.includes('twitch')) {
-    return fallbackResponses.streaming;
-  }
-  
-  if (query.includes('office') || query.includes('productivity') || query.includes('browsing') || 
-      query.includes('email')) {
-    return fallbackResponses.office;
-  }
-  
-  return fallbackResponses.default;
+  throw lastError;
 };
 
 /**
  * Test function to verify API connectivity
- * This can be called from the browser console to check if the API is working
  */
 export const testGroqApiConnection = async (): Promise<void> => {
   try {
     console.log('Testing GROQ API connection...');
     
-    const response = await groqAxios.post('', {
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      messages: [
-        {
-          role: 'user',
-          content: 'Hello, this is a test message. Please respond with "API connection successful".'
-        }
-      ]
-    });
+    // Use retry logic for test connection
+    await retryApiCall(async () => {
+      const response = await groqAxios.post('', {
+        model: 'llama3-8b-8192', // Smaller, more reliable model for testing
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: 'Hello, respond with a short message confirming API is working.' }
+        ],
+        temperature: 0.1,
+        max_tokens: 50
+      });
+      
+      console.log('GROQ API test successful!', {
+        model: response.data.model,
+        response: response.data.choices[0].message.content.substring(0, 50) + '...'
+      });
+      
+      return response;
+    }, 3);  // 3 retries max
     
-    console.log('GROQ API test successful!', {
-      id: response.data.id,
-      model: response.data.model,
-      response: response.data.choices[0].message.content
-    });
   } catch (error) {
-    console.error('GROQ API test failed:', error);
+    console.error('GROQ API test failed after retries:', error);
     
     if (axios.isAxiosError(error)) {
       console.error('Axios error details:', {
@@ -167,116 +175,203 @@ export const testGroqApiConnection = async (): Promise<void> => {
       });
     }
     
-    // Re-throw the error so the caller knows the test failed
     throw error;
   }
 };
 
 /**
- * Try to handle CORS issues by using a proxy if direct API calls fail
- */
-const makeGroqRequestWithFallback = async (
-  messages: ChatMessage[]
-): Promise<string> => {
-  try {
-    // First try direct API call
-    const response = await groqAxios.post('', {
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      messages: messages
-    });
-    
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error('Direct API call failed, checking if CORS is the issue:', error);
-    
-    if (axios.isAxiosError(error) && (
-        error.code === 'ERR_NETWORK' || 
-        error.message.includes('CORS') || 
-        error.response?.status === 0
-    )) {
-      console.log('Detected potential CORS issue, using local fallbacks');
-      
-      // If it's a CORS error, use fallback responses
-      const userMessage = messages.find(m => m.role === 'user');
-      if (userMessage) {
-        return getFallbackRecommendation(userMessage.content);
-      }
-    }
-    
-    // Re-throw for other error handling
-    throw error;
-  }
-};
-
-/**
- * Generate product recommendations based on user requirements
- * @param userQuery The user's question/requirements for PC build
- * @param selectedComponents Currently selected components (optional)
- * @returns Chatbot response with recommendations
+ * Get recommendations using ALL available products in inventory
  */
 export const getProductRecommendations = async (
   userQuery: string,
   selectedComponents: Record<string, any> = {}
 ): Promise<string> => {
   try {
-    // Create context from selected components for better recommendations
-    let componentContext = '';
+    // Generate a cache key based on the query and selected components
+    const componentString = JSON.stringify(selectedComponents);
+    const cacheKey = `${userQuery}-${componentString}`;
     
+    // Check cache first
+    const now = Date.now();
+    const cachedResponse = responseCache.get(cacheKey);
+    if (cachedResponse && (now - cachedResponse.timestamp < 5 * 60 * 1000)) {
+      console.log('Using cached response for query');
+      return cachedResponse.response;
+    }
+    
+    // Fetch all products
+    const allProducts = await getAllProducts();
+    console.log(`Using ${allProducts.length} products from inventory for recommendations`);
+    
+    // Create context from selected components
+    let componentContext = '';
     if (Object.keys(selectedComponents).length > 0) {
-      componentContext = 'Currently selected components:\n';
-      
+      componentContext = 'CURRENTLY SELECTED COMPONENTS:\n';
       for (const [category, part] of Object.entries(selectedComponents)) {
         componentContext += `- ${category.toUpperCase()}: ${part.product.name} ($${part.product.price})\n`;
       }
+      componentContext += '\n';
     }
-
-    // Create system message with instructions for the AI
+    
+    // Format all products into a string for the API
+    const inventoryContext = formatProductsForAI(allProducts);
+    
+    // Create system prompt
     const systemMessage: ChatMessage = {
       role: 'system',
-      content: `You are a helpful PC building assistant that provides detailed recommendations for computer components.
-      Focus on suggesting specific products that would work well for different use cases (gaming, content creation, office work, etc.).
-      Be specific about component specifications and why they would work well for the user's needs.
-      Keep your responses concise but informative and always explain your recommendations.
-      Only recommend components that make sense for the user's budget and needs.
-      If the user has already selected some components, make recommendations that are compatible with those.`
+      content: `You are a PC building assistant for an online computer parts store called NeuraRig.
+      
+      IMPORTANT FORMATTING INSTRUCTIONS:
+      1. ONLY recommend components that are specifically listed in the inventory provided.
+      2. DO NOT invent or suggest products that aren't explicitly listed in the available inventory.
+      3. FORMAT ALL RECOMMENDATIONS using this EXACT template for each product:
+         "For [CATEGORY], I recommend:
+         Name: [EXACT PRODUCT NAME], 
+         ID: [PRODUCT ID], 
+         Price: $[PRICE]
+         [Brief reason for recommendation]"
+      4. ALWAYS group recommendations by component category (CPU, GPU, RAM, etc.)
+      5. ALWAYS include the ID, exact name, and price for each product
+      6. Only suggest components that are compatible with what the user has already selected.
+      7. If the inventory doesn't have a suitable component for a certain need, clearly acknowledge that limitation.
+      
+      The user will provide their query followed by their currently selected components (if any) and then the full inventory list.`
     };
 
-    // Create user message with query and context
+    // Create user message with query and ALL contexts
     const userMessage: ChatMessage = {
       role: 'user',
-      content: `${userQuery}\n\n${componentContext}`
+      content: `${userQuery}\n\n${componentContext}\n\n${inventoryContext}`
     };
 
-    // Log the request for debugging
-    console.log('Preparing GROQ API request:', {
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      messages: [systemMessage, userMessage]
-    });
-
-    // Make request with CORS handling
-    const response = await makeGroqRequestWithFallback([systemMessage, userMessage]);
-    return response;
-  } catch (error) {
-    console.error('Error getting recommendations from GROQ:', error);
-    
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
+    try {
+      // Use retry logic for API calls
+      const apiResponse = await retryApiCall(async () => {
+        console.log('Sending request to GROQ API with retry logic...');
+        return await groqAxios.post('', {
+          model: 'llama3-8b-8192', // More reliable model
+          messages: [systemMessage, userMessage],
+          temperature: 0.2, // Lower temperature for more focused recommendations
+          max_tokens: 800,
+          top_p: 0.9
+        });
+      }, 3); // 3 retries
+      
+      const responseContent = apiResponse.data.choices[0].message.content;
+      console.log('GROQ API response received successfully');
+      
+      // Cache the successful response
+      responseCache.set(cacheKey, {
+        response: responseContent,
+        timestamp: now
       });
       
-      if (error.response?.status === 429) {
-        return 'I apologize, but the recommendation service is currently rate limited. Please try again in a few moments.';
+      return responseContent;
+      
+    } catch (error) {
+      console.error('GROQ API call failed even with retries:', error);
+      
+      // Create a fallback response using the available products
+      let fallbackResponse = "I'm having difficulty connecting to our recommendation service right now, but I can still help you choose components from our inventory:\n\n";
+      
+      // Filter products based on the user query
+      const queryLower = userQuery.toLowerCase();
+      
+      // Check for category-specific requests
+      if (queryLower.includes('cpu') || queryLower.includes('processor')) {
+        const cpus = allProducts.filter(p => 
+          (typeof p.category === 'string' && p.category.toLowerCase().includes('processor')) || 
+          p.name.toLowerCase().includes('cpu') ||
+          p.name.toLowerCase().includes('processor')
+        );
+        
+        if (cpus.length > 0) {
+          fallbackResponse += "CPUs available in our inventory:\n";
+          cpus.slice(0, 5).forEach(cpu => {
+            fallbackResponse += `- ${cpu.name} ($${cpu.price})\n`;
+          });
+        }
+      } 
+      else if (queryLower.includes('gpu') || queryLower.includes('graphics')) {
+        const gpus = allProducts.filter(p => 
+          (typeof p.category === 'string' && p.category.toLowerCase().includes('graphics')) || 
+          p.name.toLowerCase().includes('gpu') ||
+          p.name.toLowerCase().includes('graphics')
+        );
+        
+        if (gpus.length > 0) {
+          fallbackResponse += "GPUs available in our inventory:\n";
+          gpus.slice(0, 5).forEach(gpu => {
+            fallbackResponse += `- ${gpu.name} ($${gpu.price})\n`;
+          });
+        }
+      }
+      else if (queryLower.includes('gaming') || queryLower.includes('game')) {
+        // Suggest gaming components
+        const gamingCPUs = allProducts.filter(p => 
+          ((typeof p.category === 'string' && p.category.toLowerCase().includes('processor')) || 
+           p.name.toLowerCase().includes('cpu')) && 
+          p.price > 200 // Gaming CPUs tend to be more expensive
+        );
+        
+        const gamingGPUs = allProducts.filter(p => 
+          ((typeof p.category === 'string' && p.category.toLowerCase().includes('graphics')) || 
+           p.name.toLowerCase().includes('gpu')) && 
+          p.price > 300 // Gaming GPUs tend to be more expensive
+        );
+        
+        fallbackResponse += "For gaming PCs, consider these components from our inventory:\n\n";
+        
+        if (gamingCPUs.length > 0) {
+          fallbackResponse += "CPUs suitable for gaming:\n";
+          gamingCPUs.slice(0, 3).forEach(cpu => {
+            fallbackResponse += `- ${cpu.name} ($${cpu.price})\n`;
+          });
+          fallbackResponse += "\n";
+        }
+        
+        if (gamingGPUs.length > 0) {
+          fallbackResponse += "GPUs for gaming performance:\n";
+          gamingGPUs.slice(0, 3).forEach(gpu => {
+            fallbackResponse += `- ${gpu.name} ($${gpu.price})\n`;
+          });
+        }
+      }
+      else {
+        // Generic recommendations for top products in each category
+        const categories = [...new Set(allProducts.map(p => 
+          typeof p.category === 'string' ? p.category : p.category.toString()
+        ))];
+        
+        fallbackResponse += "Here are some products from our inventory:\n\n";
+        
+        for (const category of categories.slice(0, 3)) {
+          const categoryProducts = allProducts.filter(p => 
+            (typeof p.category === 'string' ? p.category : p.category.toString()) === category
+          );
+          
+          if (categoryProducts.length > 0) {
+            fallbackResponse += `${category}:\n`;
+            categoryProducts.slice(0, 3).forEach(product => {
+              fallbackResponse += `- ${product.name} ($${product.price})\n`;
+            });
+            fallbackResponse += "\n";
+          }
+        }
       }
       
-      if (error.code === 'ECONNABORTED') {
-        return 'The recommendation service took too long to respond. Please try again with a simpler query.';
-      }
+      fallbackResponse += "\nYou can browse our categories for more options or ask about specific components.";
+      
+      // Cache even the fallback response to reduce strain
+      responseCache.set(cacheKey, {
+        response: fallbackResponse,
+        timestamp: now
+      });
+      
+      return fallbackResponse;
     }
-    
-    // If the API call fails, use local fallback recommendations
-    console.log('Using fallback recommendations');
-    return getFallbackRecommendation(userQuery);
+  } catch (error) {
+    console.error('Fatal error in product recommendations:', error);
+    return "I'm currently having trouble accessing our product inventory. Please try again in a moment or browse our website categories directly to see what's available.";
   }
 }; 

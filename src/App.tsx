@@ -26,6 +26,7 @@ import OrdersPage from '@/pages/OrdersPage';
 import OrderHistoryPage from '@/pages/OrderHistoryPage';
 import AdminDashboard from '@/pages/AdminDashboard';
 import ProductsPage from '@/pages/ProductsPage';
+import AboutUs from '@/pages/AboutUs';
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App: React.FC = () => {
                     <Route path="/orders" element={<OrdersPage />} />
                     <Route path="/order-history" element={<OrderHistoryPage />} />
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/about" element={<AboutUs />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
                 </Routes>

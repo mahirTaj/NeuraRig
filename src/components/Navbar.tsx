@@ -94,6 +94,9 @@ const Navbar: React.FC = () => {
             <Link to="/pc-builder" className="text-sm font-medium hover:text-neura-600 transition-colors">
               PC Builder
             </Link>
+            <Link to="/about" className="text-sm font-medium hover:text-neura-600 transition-colors">
+              About Us
+            </Link>
             {isAuthenticated && (
               <Link to="/order-history" className="text-sm font-medium hover:text-neura-600 transition-colors">
                 My Orders
@@ -189,6 +192,13 @@ const Navbar: React.FC = () => {
             onClick={() => setIsMenuOpen(false)}
           >
             PC Builder
+          </Link>
+          <Link 
+            to="/about" 
+            className="p-3 border-b hover:bg-muted transition-colors"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            About Us
           </Link>
           <div className="flex flex-col gap-2 mt-4">
             <h3 className="font-semibold text-sm text-muted-foreground">Categories</h3>
