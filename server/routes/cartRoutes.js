@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
+const auth = require('../middleware/auth');
 
 // Get user's cart
 router.get('/', async (req, res) => {
@@ -33,29 +34,58 @@ router.post('/', async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     
+    // Validate product stock
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
     
+    if (product.stock < quantity) {
+      return res.status(400).json({ 
+        message: `Not enough stock available. Available: ${product.stock}, Requested: ${quantity}` 
+      });
+    }
+    
     let cart = await Cart.findOne({ user: req.user.id });
     
     if (!cart) {
-      cart = new Cart({ user: req.user.id, items: [] });
-    }
-    
-    const existingItemIndex = cart.items.findIndex(
-      item => item.product.toString() === productId
-    );
-    
-    if (existingItemIndex !== -1) {
-      cart.items[existingItemIndex].quantity += quantity;
-    } else {
-      cart.items.push({
-        product: productId,
-        quantity,
-        price: product.price
+      // Create new cart if it doesn't exist
+      cart = new Cart({
+        user: req.user.id,
+        items: [{ 
+          product: productId, 
+          quantity,
+          price: product.price
+        }]
       });
+    } else {
+      // Check if product exists in cart
+      const itemIndex = cart.items.findIndex(
+        item => item.product.toString() === productId
+      );
+      
+      if (itemIndex > -1) {
+        // Product exists in cart, update the quantity
+        const newQuantity = cart.items[itemIndex].quantity + quantity;
+        
+        // Check if the new total quantity exceeds available stock
+        if (product.stock < newQuantity) {
+          return res.status(400).json({ 
+            message: `Cannot add ${quantity} more of this item. Current cart: ${cart.items[itemIndex].quantity}, Available stock: ${product.stock}` 
+          });
+        }
+        
+        cart.items[itemIndex].quantity = newQuantity;
+        // Ensure price is updated to current price
+        cart.items[itemIndex].price = product.price;
+      } else {
+        // Product does not exist in cart, add new item
+        cart.items.push({ 
+          product: productId, 
+          quantity,
+          price: product.price
+        });
+      }
     }
     
     await cart.save();
@@ -70,7 +100,7 @@ router.post('/', async (req, res) => {
       }
     });
     
-    res.json(cart.items);
+    res.status(200).json(cart.items);
   } catch (error) {
     console.error('Error adding to cart:', error);
     res.status(400).json({ message: error.message });
@@ -82,6 +112,19 @@ router.put('/:productId', async (req, res) => {
   try {
     const { quantity } = req.body;
     const { productId } = req.params;
+    
+    // Check product stock
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    
+    // Check if requested quantity exceeds available stock
+    if (quantity > product.stock) {
+      return res.status(400).json({ 
+        message: `Cannot update quantity. Requested: ${quantity}, Available stock: ${product.stock}` 
+      });
+    }
     
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) {
@@ -100,6 +143,8 @@ router.put('/:productId', async (req, res) => {
       cart.items.splice(itemIndex, 1);
     } else {
       cart.items[itemIndex].quantity = quantity;
+      // Ensure price is updated to the current price
+      cart.items[itemIndex].price = product.price;
     }
     
     await cart.save();

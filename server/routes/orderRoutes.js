@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
+const Product = require('../models/Product');
 const auth = require('../middleware/auth');
 
 // Create a new order
@@ -25,6 +26,20 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Payment method is required' });
     }
     
+    // Check product stock before proceeding
+    for (const item of items) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res.status(404).json({ message: `Product with ID ${item.product} not found` });
+      }
+      
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ 
+          message: `Not enough stock available for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
+        });
+      }
+    }
+    
     // Create order with user ID from auth middleware
     const order = new Order({
       user: req.user.id,
@@ -37,6 +52,15 @@ router.post('/', auth, async (req, res) => {
     
     // Save the order
     const savedOrder = await order.save();
+    
+    // Update product stock
+    for (const item of items) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+    }
     
     // Return the created order
     res.status(201).json(savedOrder);
@@ -112,9 +136,24 @@ router.patch('/:id/status', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id)
+      .populate('items.product');
+      
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // If changing to cancelled status and order was not already cancelled,
+    // restore product stock
+    if (status === 'cancelled' && order.status !== 'cancelled') {
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(
+          item.product._id,
+          { $inc: { stock: item.quantity } },
+          { new: true }
+        );
+        console.log(`Restored ${item.quantity} units to product ${item.product.name} (${item.product._id})`);
+      }
     }
 
     // Update the order status
@@ -138,7 +177,8 @@ router.patch('/:id/cancel', auth, async (req, res) => {
   console.log(`User making the request: ${req.user.id}`);
   
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id)
+      .populate('items.product');
     
     if (!order) {
       console.log(`Order not found: ${req.params.id}`);
@@ -157,6 +197,16 @@ router.patch('/:id/cancel', auth, async (req, res) => {
     if (order.status !== 'processing') {
       console.log(`Cannot cancel order with status: ${order.status}`);
       return res.status(400).json({ message: 'Only processing orders can be cancelled' });
+    }
+    
+    // Restore product stock for each item in the order
+    for (const item of order.items) {
+      await Product.findByIdAndUpdate(
+        item.product._id,
+        { $inc: { stock: item.quantity } },
+        { new: true }
+      );
+      console.log(`Restored ${item.quantity} units to product ${item.product.name} (${item.product._id})`);
     }
     
     // Update the status to cancelled
