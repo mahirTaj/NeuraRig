@@ -73,7 +73,9 @@ router.get('/category/:slug', async (req, res) => {
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
-    const products = await Product.find({ category: category._id }).populate('category', 'name slug');
+    const products = await Product.find({ category: category._id })
+      .populate('category', 'name slug')
+      .populate('brand', 'name logo');
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -207,7 +209,7 @@ router.delete('/:id', auth, async (req, res) => {
       }
     });
 
-    await product.remove();
+    await Product.findByIdAndDelete(req.params.id);
     res.json({ message: 'Product deleted' });
   } catch (error) {
     console.error('Error deleting product:', error);

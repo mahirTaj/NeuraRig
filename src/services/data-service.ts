@@ -96,6 +96,25 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
   }
 };
 
+// Search products within a specific category
+export const searchProductsInCategory = async (query: string, categorySlug: string): Promise<Product[]> => {
+  try {
+    // First get all products in the category
+    const categoryProducts = await getProductsByCategorySlug(categorySlug);
+    
+    // Then filter them client-side based on the search query
+    const searchTerms = query.toLowerCase().split(' ');
+    
+    return categoryProducts.filter(product => {
+      const searchableText = `${product.name} ${product.description} ${product.modelName || ''}`.toLowerCase();
+      return searchTerms.every(term => searchableText.includes(term));
+    });
+  } catch (error) {
+    console.error('Error searching products in category:', error);
+    throw error;
+  }
+};
+
 // Cart operations
 export const getCart = async (): Promise<CartItem[]> => {
   try {

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { getCategories, getProducts, getBrands, createBrand, updateBrand, deleteBrand, createCategory, updateCategory, deleteCategory, createProduct } from '@/services/data-service';
+import { getCategories, getProducts, getBrands, createBrand, updateBrand, deleteBrand, createCategory, updateCategory, deleteCategory, createProduct, updateProduct, deleteProductImage } from '@/services/data-service';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, Trash2, Search, Pencil } from 'lucide-react';
@@ -128,8 +128,7 @@ const AdminDashboard = () => {
       const formattedSpecifications = selectedCategory.specifications.map(spec => ({
         name: spec.name,
         value: productForm.specs[spec.name] || '',
-        type: spec.type,
-        required: spec.required || false
+        unit: spec.unit || undefined
       }));
 
       const productData = {
@@ -318,6 +317,15 @@ const AdminDashboard = () => {
 
   const handleEditProduct = (product: any) => {
     setEditingProduct(product._id);
+    
+    // Convert specifications array to object format for the form
+    const specsObject = {};
+    if (product.specifications && Array.isArray(product.specifications)) {
+      product.specifications.forEach(spec => {
+        specsObject[spec.name] = spec.value;
+      });
+    }
+    
     setProductForm({
       name: product.name,
       price: product.price.toString(),
@@ -328,7 +336,7 @@ const AdminDashboard = () => {
       images: [],
       existingImages: product.images,
       rating: product.rating || 0,
-      specs: product.specifications || {},
+      specs: specsObject,
       featured: product.featured || false
     });
   };
@@ -369,6 +377,25 @@ const AdminDashboard = () => {
         return;
       }
 
+      // Get the selected category to access its specifications
+      const selectedCategory = categories?.find(c => c._id === productForm.category);
+      if (!selectedCategory) {
+        toast({
+          title: "Error",
+          description: "Category not found",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // Convert specs object to array format required by the API
+      const formattedSpecifications = selectedCategory.specifications.map(spec => ({
+        name: spec.name,
+        value: productForm.specs[spec.name] || '',
+        unit: spec.unit || undefined
+      }));
+
       const productData = {
         name: productForm.name,
         brand: productForm.brand,
@@ -379,6 +406,7 @@ const AdminDashboard = () => {
         stock: parseInt(productForm.stock),
         images: productForm.images,
         existingImages: productForm.existingImages,
+        specifications: formattedSpecifications,
         featured: productForm.featured
       };
 

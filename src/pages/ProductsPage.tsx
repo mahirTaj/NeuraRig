@@ -41,7 +41,7 @@ const ProductsPage = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [specFilters, setSpecFilters] = useState<SpecFilterState>({});
   const [expandedSpecSections, setExpandedSpecSections] = useState<{[key: string]: boolean}>({});
-  const [debugMode, setDebugMode] = useState<boolean>(true);
+  const [debugMode, setDebugMode] = useState<boolean>(false);
 
   // Decide which query to use based on whether we're searching
   const { data: products, isLoading, error, refetch } = useQuery({
@@ -103,6 +103,13 @@ const ProductsPage = () => {
     }, 0);
 
     console.log('Total specifications count in API data:', specCount);
+
+    // If we're searching, preserve the real specifications from the API 
+    // rather than using mock data to maintain accurate filtering
+    if (searchQueryParam) {
+      console.log('Search query detected, preserving original product specifications');
+      return products;
+    }
 
     if (specCount === 0 || debugMode) {
       // If no specs or in debug mode, add mock specs based on categories
